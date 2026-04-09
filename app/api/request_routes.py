@@ -46,7 +46,7 @@ class RequestsResource(MethodView):
             return [req.to_dict() for req in requests]
         abort(400, message="Nessun record presente.")
     
-    @jwt_required
+    @jwt_required(fresh=True)
     def delete(self):
         jwt = get_jwt()
         if not jwt.get("is_admin"):
@@ -102,8 +102,8 @@ class ProcessResource(MethodView):
 
 @blp.route("/foto")
 class FotoResource(MethodView):
-    # @jwt_required()
-    # @blp.arguments(RequestFotoSchema)
+
+    @jwt_required()
     @blp.response(201, FotoResponseSchema)
     def post(self):
         try:
@@ -122,6 +122,7 @@ class FotoResource(MethodView):
                 message = f"Errore durante la creazione della richiesta: {str(e)}"
             )
     
+    @jwt_required()
     @blp.response(200, FotoResponseSchema(many=True))
     def get(self):
         try:
@@ -133,7 +134,7 @@ class FotoResource(MethodView):
 @blp.route("/foto/<int:request_id>/process")
 class ProcessFoto(MethodView):
 
-    # @jwt_required(fresh=True)
+    @jwt_required(fresh=True)
     @blp.response(200, FotoResponseSchema)
     def post(self, request_id):
         """ Scatena l'elaborazione AI per una richiesta Foto specifica"""
@@ -148,6 +149,7 @@ class ProcessFoto(MethodView):
 @blp.route("/foto/<int:request_id>")
 class RequestFotoDetail(MethodView):
 
+    @jwt_required()
     @blp.response(200, FotoResponseSchema)
     def get(self, request_id)-> FotoResponseSchema:
         try:
