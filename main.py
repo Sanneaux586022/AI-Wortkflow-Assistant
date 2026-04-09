@@ -5,6 +5,7 @@ from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from app.core.config import Config
 from app.db.database import db
+from app.models.user import User
 import redis
 from rq import Queue
 from app.core.logger import setup_logging
@@ -63,10 +64,12 @@ def create_app():
 
     @jwt.additional_claims_loader
     def add_claims_to_jwt(identity):
-        # Look in the database and see wheter the user is an admin 
-        if identity == "1":
-            return {"is_admin": True}
-        return {"is_admin": False}
+        # Look in the database and see whether the user is an admin 
+        user = User.query.get(int(identity))
+        # if identity == "1":
+        #     return {"is_admin": True}
+        # return {"is_admin": False}
+        return {"is_admin": user.is_admin}
 
 
     @jwt.expired_token_loader

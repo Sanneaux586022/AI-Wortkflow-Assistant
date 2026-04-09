@@ -4,10 +4,16 @@ Sistema di gestione richieste clienti con classificazione automatica tramite Goo
 
 ## Descrizione
 
-L'applicazione riceve richieste di supporto clienti, le archivia nel database e le analizza con Gemini AI per:
+L'applicazione riceve richieste di supporto clienti (testo o immagini), le archivia nel database e le analizza con Gemini AI per:
+
+**Richieste testo:**
 - **Classificare** il tipo di richiesta (`supporto`, `vendita`, `reclamo`)
 - **Assegnare una priorità** (`bassa`, `media`, `alta`)
 - **Generare una risposta suggerita** professionale
+
+**Richieste foto (classificazione animali):**
+- **Identificare** razza, famiglia, classificazione dell'animale
+- **Descrivere** il rapporto con l'uomo e il grado di pericolosità
 
 ## Stack tecnologico
 
@@ -17,11 +23,12 @@ L'applicazione riceve richieste di supporto clienti, le archivia nel database e 
 | ORM | Flask-SQLAlchemy |
 | Autenticazione | Flask-JWT-Extended |
 | AI | Google Gemini 2.5 Flash |
-| Cache / Token blocklist | Redis |
-| Code asincrona | RQ (Redis Queue) |
+| Token blocklist | Redis |
 | Database dev | SQLite |
 | Database prod | PostgreSQL |
 | Containerizzazione | Docker + Docker Compose |
+
+> **Nota:** RQ (Redis Queue) è incluso come dipendenza ma l'elaborazione è attualmente **sincrona** — non vengono usati worker in background.
 
 ## Prerequisiti
 
@@ -71,7 +78,10 @@ L'API sarà disponibile su `http://localhost:5000`.
 ```bash
 # Installa le dipendenze con uv
 pip install uv
-uv pip install -e .
+uv pip install -e ".[dev]"
+
+# Crea la cartella per i file caricati
+mkdir -p multimedia/uploads
 
 # Avvia Redis (richiesto per JWT blocklist)
 docker run -d -p 6379:6379 redis:alpine
@@ -79,6 +89,8 @@ docker run -d -p 6379:6379 redis:alpine
 # Avvia l'applicazione
 python main.py
 ```
+
+> **Attenzione locale:** il salvataggio delle foto usa il path `/app/multimedia/uploads` (pensato per Docker). In locale, assicurati che il path esista o adatta `ingestion_service.py`.
 
 ### Documentazione API interattiva (Swagger UI)
 
@@ -97,15 +109,25 @@ Con l'app avviata, visita: `http://localhost:5000/docs/swagger-ui`
 | `POST` | `/users/refresh` | Rinnova l'access token | Refresh token |
 | `POST` | `/users/logout` | Revoca il token corrente | Access token (fresh) |
 
-### Richieste clienti (`/requests`)
+### Richieste testo (`/requests`)
 
 | Metodo | Endpoint | Descrizione | Token richiesto |
 |---|---|---|---|
-| `POST` | `/requests` | Crea una nuova richiesta | Access token |
-| `GET` | `/requests` | Elenca tutte le richieste | Access token |
-| `GET` | `/requests/<id>` | Dettaglio di una richiesta | Access token |
+| `POST` | `/requests` | Crea una nuova richiesta testo | Access token |
+| `GET` | `/requests` | Elenca tutte le richieste testo | Access token |
+| `GET` | `/requests/<id>` | Dettaglio di una richiesta testo | Access token |
 | `POST` | `/requests/<id>/process` | Avvia elaborazione AI | Access token (fresh) |
-| `DELETE` | `/requests/<id>` | Elimina una richiesta | Admin + fresh token |
+| `DELETE` | `/requests` | Elimina **tutte** le richieste | Admin + fresh token |
+| `DELETE` | `/requests/<id>` | Elimina una singola richiesta | Admin + fresh token |
+
+### Richieste foto (`/requests/foto`)
+
+| Metodo | Endpoint | Descrizione | Token richiesto |
+|---|---|---|---|
+| `POST` | `/requests/foto` | Carica una foto (multipart/form-data, campo `file`) | Access token |
+| `GET` | `/requests/foto` | Elenca tutte le richieste foto | Access token |
+| `GET` | `/requests/foto/<id>` | Dettaglio di una richiesta foto | Access token |
+| `POST` | `/requests/foto/<id>/process` | Avvia classificazione AI dell'immagine | Access token (fresh) |
 
 ---
 
@@ -130,9 +152,21 @@ curl -X POST http://localhost:5000/requests \
 # → risposta: {"id": 1, "status": "pending", ...}
 
 # 4. Avvia l'elaborazione AI sulla richiesta con id=1
+# (richiede fresh token: riesegui il login per ottenerne uno nuovo)
 curl -X POST http://localhost:5000/requests/1/process \
-  -H "Authorization: Bearer <access_token>"
+  -H "Authorization: Bearer <fresh_access_token>"
 # → risposta: {"category": "supporto", "priority": "alta", "suggested_reply": "..."}
+
+# 5. Carica una foto di un animale
+curl -X POST http://localhost:5000/requests/foto \
+  -H "Authorization: Bearer <access_token>" \
+  -F "file=@/percorso/del/file/immagine.jpg"
+# → risposta: {"id": 1, "status": "pending", "foto_path": "...", ...}
+
+# 6. Avvia la classificazione AI della foto con id=1
+curl -X POST http://localhost:5000/requests/foto/1/process \
+  -H "Authorization: Bearer <fresh_access_token>"
+# → risposta: {"classificazione": "Mammifero", "razza": "...", "famiglia": "...", ...}
 ```
 
 ---
@@ -140,8 +174,8 @@ curl -X POST http://localhost:5000/requests/1/process \
 ## Eseguire i test
 
 ```bash
-# Installa le dipendenze di test
-pip install pytest pytest-flask
+# Installa le dipendenze di test (incluse con [dev])
+uv pip install -e ".[dev]"
 
 # Esegui tutti i test
 pytest
@@ -156,7 +190,6 @@ pytest tests/unit/ -v
 pytest tests/integration/ -v
 
 # Con report di copertura
-pip install pytest-cov
 pytest --cov=app --cov-report=term-missing
 ```
 
@@ -166,22 +199,26 @@ pytest --cov=app --cov-report=term-missing
 
 ```
 ai-workflow-assistant/
-├── main.py                      # Factory dell'app Flask
+├── main.py                      # Entry point e factory dell'app Flask
 ├── pyproject.toml               # Dipendenze progetto
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env                         # Segreti locali (NON committare)
 ├── .env.example                 # Template variabili d'ambiente
 ├── smoke_test.py                # Script di test manuale
+├── multimedia/
+│   └── uploads/                 # Foto caricate dagli utenti
 └── app/
+    ├── errors.py                # Handler di errore globali (attualmente disabilitato)
     ├── core/
     │   ├── config.py            # Configurazione centralizzata (legge da .env)
-    │   └── logger.py            # Setup logging
+    │   ├── logger.py            # Setup logging
+    │   └── prompts.py           # Prompt AI (testo e foto)
     ├── db/
     │   ├── database.py          # Istanza SQLAlchemy condivisa
     │   └── redis_client.py      # Helper connessione Redis
     ├── models/
-    │   ├── request.py           # Modello ORM: CustomerRequest
+    │   ├── request.py           # Modelli ORM: CustomerRequest, CustomerRequestFoto
     │   └── user.py              # Modello ORM: User
     ├── api/
     │   ├── request_routes.py    # Blueprint endpoint /requests
@@ -220,7 +257,7 @@ Client HTTP
        │
        ▼
 ┌────────────┐
-│   Redis    │  ← token blocklist (logout) + code RQ
+│   Redis    │  ← token blocklist (logout)
 └────────────┘
 ```
 

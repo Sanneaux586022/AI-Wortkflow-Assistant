@@ -22,7 +22,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - FLASK_ENV=development
-      - DATABASE_URL=sqlite:////app/data/customer_requests.DATABASE_URL
+      - SQLALCHEMY_DATABASE_URI=sqlite:////app/data/customer_requests.db
 
     restart: unless-stopped
   

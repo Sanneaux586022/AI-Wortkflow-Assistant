@@ -29,17 +29,20 @@ class RequestFotoSchema(Schema):
 class FotoResponseSchema(Schema):
     id = fields.Int(dump_only=True)
     foto_path = fields.Str(required=True, dump_only=True)
-    razza = fields.Str(required=True, dump_only=True)
+    tipo = fields.Str(required=True, dump_only=True)
+    classe = fields.Str(required=True, dump_only=True)
+    ordine = fields.Str(required=True, dump_only=True)
     famiglia = fields.Str(required=True, dump_only=True)
-    descrizione = fields.Str(required=True, dump_only=True)
+    genere = fields.Str(required=True, dump_only=True)
+    specie = fields.Str(required=True, dump_only=True)
     pericolosità = fields.Str(required=True, dump_only=True)
-    classificazione = fields.Str(required=True, dump_only=True)
 
     status = fields.Str(required=True, dump_only=True) 
     created_at = fields.DateTime(required=True, dump_only=True)
 
 class UserSchema(Schema):
     id = fields.Int(dump_only=True)
+    is_admin = fields.Bool(dump_only=True)
     create_at = fields.DateTime(dump_only=True)
     modify_at = fields.DateTime(dump_only=True)
 

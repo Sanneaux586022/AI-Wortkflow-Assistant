@@ -18,8 +18,10 @@ class UserService:
         new_user = User(
             username = user_data['username'],
             email = user_data['email'],
-            hash_password = pbkdf2_sha256.hash(user_data['password'])
+            hash_password = pbkdf2_sha256.hash(user_data['password']),
         )
+        if 'is_admin' in user_data:
+            new_user.is_admin = user_data['is_admin']
         try:
             self.db.session.add(new_user)
             self.db.session.commit()

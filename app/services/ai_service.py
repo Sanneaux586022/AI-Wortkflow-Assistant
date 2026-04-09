@@ -74,11 +74,9 @@ class AIService:
         # Fallback sicuro in caso di errore totale dopo i retries
         if not result:
             return {
-                "Razza": "unknown",
-                "Famiglia": "unknown",
-                "descrizione": "unknown",
-                "pericolosità": "unknown",
-                "classificazione": "unknown"
+                "category": "unknown",
+                "priority": "unknown",
+                "suggested_reply": "unknown",
             }
         
         return result
@@ -106,11 +104,13 @@ class AIService:
         # Fallback sicuro in caso di errore totale dopo i retries
         if not result:
             return {
-                "razza": "unknown",
+                "tipo": "unknown",
+                "classe": "unknown",
+                "ordine": "unknown",
                 "famiglia": "unknown",
-                "descrizione": "unknown",
-                "pericolosità": "unknown",
-                "classificazione": "unknown"
+                "genere": "unknown",
+                "specie": "unknown",
+                "pericolosità": "unknown"
             }
         
         return result

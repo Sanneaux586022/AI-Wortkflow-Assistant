@@ -1,5 +1,5 @@
 [project]
-name = "ai-workflow-assitant"
+name = "ai-workflow-assistant"
 version = "0.1.0"
 description = "Assistente Ai per gestione mail aziendale"
 requires-python = ">=3.10"

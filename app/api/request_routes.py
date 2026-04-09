@@ -75,7 +75,7 @@ class RequestDetailResource(MethodView):
         if not jwt.get("is_admin"):
             abort(401, message="Richiesti privileggi di Amministratore.")
         request = CustomerRequest.query.get_or_404(request_id)
-        db.session.delete(request.id)
+        db.session.delete(request)
         db.session.commit()
 
         return {"message": "Richiesta correttamente cancellata."}

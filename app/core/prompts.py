@@ -21,14 +21,26 @@ PROMPT_PHOTO = """
             Sei un sistema esperto di riconoscimento immagini.
             Analizza la seguente foto e restituisci un JSON.
 
-            Razza: Razza dell'animale in foto.
-            Famiglia: famiglia dell'animale in foto.
-            descrizione: del rapporto dell'animale in foto con l'uomo.
+            tipo: Suddivisione basata sul piano strutturale.
+            classe: Gruppi che condividono caratteristiche chiave
+            Famiglia: Generi simili.
+            ordine: Suddivisione delle classi.
+            genere: specie strettamente imparentate.
+            specie: Unità biologica base, individui in grado di accoppiarsi
             pericolosità: dell'animale in foto.
-            classificazione dell'animale in foto.
 
             foto dell'animale : {text}
 
-            Rispondi ESCLUSIVAMENTE con questi dati in modopreciso e conciso.
+            Rispondi ESCLUSIVAMENTE con questi dati in modo preciso e conciso.
+            {{
+                "tipo": "string",
+                "classe": "string",
+                "ordine": "string",
+                "famiglia": "string",
+                "genere": "string",
+                "specie": "string",
+                "pericolosità": "string",
+            
+            }}
 
             """

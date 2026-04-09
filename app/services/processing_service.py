@@ -74,11 +74,13 @@ class ProcessingService:
             ai_results = self.ai.process_request_image_description(customer_request_foto.foto_path)
 
             # 3. Aggiornamento dei campi del modello
-            customer_request_foto.razza = ai_results.get("razza")
+            customer_request_foto.tipo = ai_results.get("tipo")
+            customer_request_foto.classe = ai_results.get("classe")
+            customer_request_foto.ordine = ai_results.get("ordine")
             customer_request_foto.famiglia = ai_results.get("famiglia")
-            customer_request_foto.descrizione = ai_results.get("descrizione")
+            customer_request_foto.genere = ai_results.get("genere")
+            customer_request_foto.specie = ai_results.get("specie")
             customer_request_foto.pericolosità = ai_results.get("pericolosità")
-            customer_request_foto.classificazione = ai_results.get("classificazione")
 
             # 4. Cambia Stato
             customer_request_foto.status = "processed"

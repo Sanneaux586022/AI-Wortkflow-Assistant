@@ -47,11 +47,13 @@ class CustomerRequestFoto(db.Model):
     # percorso della foto
     foto_path = db.Column(db.Text, nullable=False)
 
-    razza = db.Column(db.String(50), nullable=True)
+    tipo = db.Column(db.String(50), nullable=True)
+    classe = db.Column(db.String(50), nullable=True)
+    ordine = db.Column(db.String(50), nullable=True)
     famiglia = db.Column(db.String(50), nullable=True)
-    descrizione = db.Column(db.String(50), nullable=True)
+    genere = db.Column(db.String(50), nullable=True)
+    specie = db.Column(db.String(50), nullable=True)
     pericolosità = db.Column(db.String(50), nullable=True)
-    classificazione = db.Column(db.String(50), nullable=True)
 
     status = db.Column(db.String(20), default="pending") #pending processed, error
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
@@ -64,11 +66,13 @@ class CustomerRequestFoto(db.Model):
         return {
             "id": self.id,
             "foto_path": self.foto_path,
-            "razza": self.razza,
+            "tipo": self.tipo,
+            "classe": self.classe,
+            "ordine": self.ordine,
             "famiglia": self.famiglia,
-            "descrizione": self.descrizione,
+            "genere": self.genere,
+            "specie": self.specie,
             "pericolosità": self.pericolosità,
-            "classificazione": self.classificazione,
             "status": self.status,
             "create_at": self.created_at.isoformat() if self.created_at else None
         }
