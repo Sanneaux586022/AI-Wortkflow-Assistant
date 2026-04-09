@@ -121,26 +121,46 @@ class FotoResource(MethodView):
             abort(500, 
                 message = f"Errore durante la creazione della richiesta: {str(e)}"
             )
+    
+    @blp.response(200, FotoResponseSchema(many=True))
+    def get(self):
+        try:
+            foto_request_list = processing_service.foto_req_list()
+            return foto_request_list
+        except ValueError as e:
+            abort(400, message=f"Errore nel recupero delle richieste: {str(e)}")
 
 @blp.route("/foto/<int:request_id>/process")
 class ProcessFoto(MethodView):
 
     # @jwt_required(fresh=True)
-    @blp.response(200, ResponseSchema)
+    @blp.response(200, FotoResponseSchema)
     def post(self, request_id):
         """ Scatena l'elaborazione AI per una richiesta Foto specifica"""
-        # Verifichiamo che la richiesta esiste  
-        # request = CustomerRequestFoto.query.get_or_404(request_id)
-
-        # if request.status == "processed":
-        #     abort(400, message="Questa richiesta è già stata elaborata.")
         
         try:
             # Il processingService si occupa di chiamare l'AI Servicee aggiornare il DB
-            processed_request = processing_service.predict(request_id)
-            return processed_request.to_dict()
+            foto_processed = processing_service.predict(request_id)
+            return foto_processed.to_dict()
         except Exception as e:
             abort( 500, message=f"Errore durante l'elaborazione AI : {str(e)}")
+    
+@blp.route("/foto/<int:request_id>")
+class RequestFotoDetail(MethodView):
+
+    @blp.response(200, FotoResponseSchema)
+    def get(self, request_id)-> FotoResponseSchema:
+        try:
+            foto_processed = processing_service.get_foto_req(request_id)
+            return foto_processed
+        except ValueError as e:
+            abort(400, message=f"Errore nel recupero della richiesta: {str(e)}")
+    
+
+
+
+    
+
     
 
 

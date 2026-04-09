@@ -95,7 +95,24 @@ class ProcessingService:
             self.db.session.commit()
             self.logger.error(f"💥 Errore durante l'elaborazione dell'ID {request_id}: {e}")
             raise e
-        
 
-        
 
+    def foto_req_list(self)-> list[CustomerRequestFoto]:
+        
+        customer_requests_ft = self.db.session.query(CustomerRequestFoto).all()
+
+        if len(customer_requests_ft) < 1:
+            raise ValueError("Nessuna richiesta presente.")
+        
+        return [crft.to_dict() for crft in customer_requests_ft]
+        
+    def get_foto_req(self, request_id) -> CustomerRequestFoto:
+        
+        customer_req_ft = self.db.session.query(CustomerRequestFoto).filter(
+            CustomerRequestFoto.id == request_id
+        ).first()
+
+        if not customer_req_ft:
+            raise ValueError("Richiesta non trovata.")
+        
+        return customer_req_ft.to_dict()
