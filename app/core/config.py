@@ -1,0 +1,29 @@
+import os
+from dotenv import load_dotenv
+from datetime import timedelta
+load_dotenv()
+
+# BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+# SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(BASE_DIR, "app.db")
+class Config:
+        
+        # API Keys
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        GEMINI_MODEL = os.getenv("GEMINI_MODEL")
+
+        # Database
+        SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "sqlite:///custumer_requests.db")
+        SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+        # Flask Smorest / OpenAPI
+        API_TITLE= "AI Workflow Assistant"
+        API_VERSION = "v1"
+        OPENAPI_VERSION = "3.0.3"
+        OPENAPI_URL_PREFIX = "/docs"
+        OPENAPI_SWAGGER_UI_PATH = "/swagger-ui"
+        OPENAPI_SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+
+        JWT_SECRET_KEY = os.getenv("PRIVATE_APP_KEY")
+        JWT_ACCESS_TOKEN_EXPIRE = timedelta(minutes=30)
+        JWT_REFRESH_TOKEN_EXPIRE = timedelta(days=7)
+        REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")

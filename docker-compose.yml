@@ -1,0 +1,35 @@
+services:
+  api:
+  # Cerca il Dockerfile nella cartella corrente
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Mappa la porta del contianer (5000) sulla porta del tuo PC (5000)
+    ports:
+      - "5000:5000"
+
+    # Carica le variabili d'ambiente dal tuo .env locale
+    env_file:
+      - .env
+
+    # Persistenza dei dati
+    volumes:
+      - .:/app
+      - sqlite_data:/app/data
+
+    # Importante per Flask: assicura che l'output del log sia visibile in tempo reale
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:////app/data/customer_requests.DATABASE_URL
+
+    restart: unless-stopped
+  
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+
+volumes:
+    sqlite_data:

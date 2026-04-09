@@ -1,0 +1,31 @@
+# Ambienti virtuali (vengono ricreati dentro Docker con uv)
+.venv/
+venv/
+ENV/
+pyvenv.cfg
+
+# Database locali (non vogliamo i dati di test nel container)
+*.db
+*.sqlite3
+
+# Cache di Python e strumenti
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.uv/
+
+# File di configurazione sensibili (li passeremo via Docker Compose)
+.env
+
+# Git e documentazione varia
+.git/
+.gitignore
+README.md
+Dockerfile
+docker-compose.yml
+
+# Altri file di sistema
+.DS_Store
+Thumbs.db
