@@ -6,7 +6,7 @@ PROMPT_TEXT = """
             Categorie : supporto, vendita, reclamo
             Priorità : bassa, media, alta
 
-            Richiesta cliente: "{text}"
+            Richiesta cliente: {text}
 
             Rispondi ESCLUSIVAMENTE con questo formato JSON:
             {{

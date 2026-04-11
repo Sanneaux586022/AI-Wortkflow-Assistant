@@ -58,7 +58,7 @@ class AIService:
         #     }}
 
         # """
-        prompt = PROMPT_TEXT.format(text)
+        prompt = PROMPT_TEXT.format(text=text)
         def call():
             response = self.client.models.generate_content(
                 model=self.model_id,

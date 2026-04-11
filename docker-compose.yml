@@ -16,7 +16,7 @@ services:
     # Persistenza dei dati
     volumes:
       - .:/app
-      - sqlite_data:/app/data
+      # - sqlite_data:/app/data
 
     # Importante per Flask: assicura che l'output del log sia visibile in tempo reale
     environment:

@@ -42,7 +42,6 @@ class FotoResponseSchema(Schema):
 
 class UserSchema(Schema):
     id = fields.Int(dump_only=True)
-    is_admin = fields.Bool(dump_only=True)
     create_at = fields.DateTime(dump_only=True)
     modify_at = fields.DateTime(dump_only=True)
 
@@ -52,4 +51,5 @@ class UserLoginSchema(UserSchema):
 
 class UserRegisterSchema(UserLoginSchema):
     email = fields.Str(required=True)
+    is_admin = fields.Bool()
 
