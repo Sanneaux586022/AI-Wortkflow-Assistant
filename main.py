@@ -1,11 +1,10 @@
-import os
 from flask import Flask, jsonify
 from flask_smorest import Api
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from app.core.config import Config
 from app.db.database import db
-from app.models.user import User
+from app.models import User, BaseRequest, MailRequest, FotoRequest
 import redis
 from rq import Queue
 from app.core.logger import setup_logging
@@ -24,16 +23,9 @@ def create_app():
     app.queue = Queue("users", connection=app.redis)
 
 
-    # --- LOGICA PER DOCKER ---
-    # Se DATABASE_URL punta a una cartella specifica, assicuriamoci che esista
-    db_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
-    if "/app/data" in db_url:
-        os.makedirs("/app/data", exist_ok=True) # exist_ok evita se la cartella c'è gia
-    # -----------------------
-
     # Inizializziamo il db
     db.init_app(app)
-    # migrate = Migrate(app, db)
+    migrate = Migrate(app, db)
 
     # Inizializziamo API Smorest
     api = Api(app)
@@ -95,10 +87,6 @@ def create_app():
             ),
             401
         )
-
-    with app.app_context():
-        # Crea il file app.db se non esiste
-        db.create_all()
 
     # Registrazione Blueprint delle rotte
     api.register_blueprint(RequestBlueprint)

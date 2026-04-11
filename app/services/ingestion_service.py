@@ -1,6 +1,6 @@
 
 import os
-from app.models.request import CustomerRequest, CustomerRequestFoto
+from app.models.request import BaseRequest, FotoRequest, MailRequest
 from sqlalchemy import text
 from werkzeug.utils import secure_filename
 
@@ -14,65 +14,50 @@ class IngestionService:
         self.db = db_session
         self.logger = logger
     
-    def create_request_cr(self, text: str)-> CustomerRequest:
+    def create_mail_request(self, mail_text: str, request_type: str)-> MailRequest:
         """
-        Crea un'istanza del modello CustomerRequest partendo dal testo grezzo.
-        L'oggetto viene salvato nel DB.
+        Crea un'istanza del modello MailRequest partendo dal testo grezzo.
+        L'oggetto viene salvato nel DB. sulle tabelle 
+        BaseRequest, MailRequest
         """
         self.logger.info("📥 Creazione nuova richiesta nel database ...")
-        new_request = CustomerRequest(
-            text=text,
+        new_mail_request = MailRequest(
+            mail_text=mail_text,
+            request_type = request_type,
             status="pending"
         )
         try:
-            self.db.session.add(new_request)
+            self.db.session.add(new_mail_request)
             self.db.session.commit()
-            self.db.session.refresh(new_request)
-            self.logger.info(f"✅ Richiesta salvata con ID: {new_request.id}")
-            return new_request
+            self.db.session.refresh(new_mail_request)
+            self.logger.info(f"✅ Richiesta salvata con ID: {new_mail_request.id}")
+            return new_mail_request
         except Exception as e:
             self.db.session.rollback()
             self.logger.error(f"❎ Errore DB in IngestionService: {str(e)}")
-            raise e
-        
-    def get_all_request_cr(self):
-        """
-        Recupero tutte le richieste presenti nel database
-        """
-        return self.db.session.query(CustomerRequest).all()
+            raise e       
     
-    def cancel_all_record_cr(self):
-        try:
-            deleted = self.db.session.query(CustomerRequest).delete()
-            self.db.session.execute(text("DELETE FROM sqlite_sequence WHERE name='customer_requests'"))
-            self.db.session.commit()
-            self.logger.info(f"cancellati : {deleted}")
-            return deleted
-        except Exception as e:
-            self.db.session.rollback()
-            self.logger.error(f"Errore durante la cancellazione: {str(e)}")
-            raise ValueError(f"Errore durante la cancellazione: {str(e)}")
-        
-    
-    def create_request_ft(self, file)-> CustomerRequestFoto:
+    def create_foto_request(self, file, request_type: str)-> FotoRequest:
         """
-        Crea un'istanza del modello CustomerRequestFoto partendo dalla path della foto.
+        Crea un'istanza del modello FotoRequest partendo dalla path della foto.
         L'oggetto viene salvato nel DB.
         """
         self.logger.info("📥 Creazione nuova richiesta nel database ...")
         filename = secure_filename(file.filename)
         save_path = os.path.join("/app/multimedia/uploads", filename)
         file.save(save_path)
-        new_request_foto = CustomerRequestFoto(
+        new_foto_request = FotoRequest(
             foto_path = save_path,
+            request_type = request_type,
             status="pending"
         )
 
         try:
-            self.db.session.add(new_request_foto)
+            self.db.session.add(new_foto_request)
             self.db.session.commit()
-            self.db.session.refresh(new_request_foto)
-            return new_request_foto
+            self.db.session.refresh(new_foto_request)
+            self.logger.info(f"✅ Richiesta salvata con ID: {new_foto_request.id}")
+            return new_foto_request
 
         except Exception as e:
             self.db.session.rollback()

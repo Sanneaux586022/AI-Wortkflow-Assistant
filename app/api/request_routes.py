@@ -4,8 +4,9 @@ from flask_smorest import Blueprint, abort
 from app.api.schemas import RequestSchema, ResponseSchema, FotoResponseSchema, RequestFotoSchema
 from app.services.ingestion_service import IngestionService
 from app.services.processing_service import ProcessingService
+from app.services.common_service import CommonService
 from app.services.ai_service import AIService
-from app.models.request import CustomerRequest
+from app.models.request import MailRequest
 from app.db.database import db
 from flask_jwt_extended import jwt_required, get_jwt
 from app.core.logger import get_logger
@@ -17,6 +18,7 @@ blp = Blueprint("requests", "requests", description="Operazioni requests",
 
 ai_engine = AIService(logger=logger)
 ingestion_service = IngestionService(db_session=db, logger=logger)
+common_service = CommonService(db_session=db, logger=logger)
 processing_service = ProcessingService(db_session=db, ai_service=ai_engine, logger=logger)
 
 
@@ -29,7 +31,7 @@ class RequestsResource(MethodView):
     @blp.response(201, ResponseSchema)
     def post(self, data):
         try:
-            new_request = ingestion_service.create_request_cr(data["text"])
+            new_request = ingestion_service.create_mail_request(data["text"], data["request_type"])
             return new_request.to_dict()
         
         except Exception as e:
@@ -51,8 +53,11 @@ class RequestsResource(MethodView):
         jwt = get_jwt()
         if not jwt.get("is_admin"):
             abort(401, message="Richiesti privileggi di Amministratore.")
-        deleted = ingestion_service.cancel_all_record_cr()
-        return {"message": f"Eliminati {deleted} record"}, 200
+        try:
+            deleted = common_service.cancel_mail_request_all()
+            return {"message": f"Eliminati {deleted} record"}, 200
+        except Exception as e:
+            abort(500, message=f"Internal Server Error: {str(e)}")
 
     
 @blp.route("/<int:request_id>")
@@ -62,10 +67,12 @@ class RequestDetailResource(MethodView):
     @blp.response(200, ResponseSchema)
     def get(self, request_id):
         """ Ottiene i dettagli di una singola richiesta"""
-        request = CustomerRequest.query.get_or_404(request_id)
+        try:
+            request = common_service.get_mail_request(request_id)
+            return request.to_dict()
+        except Exception as e:
+            abort(404, message=f"Errore: {str(e)}")
 
-        return request.to_dict()
-    
     @jwt_required(fresh=True)
     def delete(self, request_id):
         # Controllo se la richiesta esiste prima 
@@ -74,11 +81,14 @@ class RequestDetailResource(MethodView):
         jwt = get_jwt()
         if not jwt.get("is_admin"):
             abort(401, message="Richiesti privileggi di Amministratore.")
-        request = CustomerRequest.query.get_or_404(request_id)
-        db.session.delete(request)
-        db.session.commit()
+        try:
+            common_service.cancel_mail_request(request_id)
+            return {"message": "Richiesta correttamente cancellata."}
+        except RuntimeError as e:
+            abort(500 , message=f"Errore durante la cancellazione: {str(e)}")
+        except LookupError as e:
+            abort(404 , message=f"Errore durante la cancellazione: {str(e)}")            
 
-        return {"message": "Richiesta correttamente cancellata."}
 
 @blp.route("/<int:request_id>/process")
 class ProcessResource(MethodView):
@@ -86,15 +96,15 @@ class ProcessResource(MethodView):
     @jwt_required(fresh=True)
     @blp.response(200, ResponseSchema)
     def post(self, request_id):
-        """ Scatena l'elaborazione AI per una richiesta specifica"""
+        """ Scatena l'elaborazione AI per una richiesta Mail specifica"""
         # Verifichiamo che la richiesta esiste  
-        request = CustomerRequest.query.get_or_404(request_id)
+        request = common_service.get_mail_request(request_id)
 
         if request.status == "processed":
             abort(400, message="Questa richiesta è già stata elaborata.")
         
         try:
-            # Il processingService si occupa di chiamare l'AI Servicee aggiornare il DB
+            # Il processingService si occupa di chiamare l'AI Service aggiornare il DB
             processed_request = processing_service.process(request_id)
             return processed_request.to_dict()
         except Exception as e:
@@ -108,13 +118,14 @@ class FotoResource(MethodView):
     def post(self):
         try:
             file = request.files.get("file")
+            request_type = request.body.get("request_type")
             
             if file is None:
                 abort(400, message="File mancante.")
             
             print("FILE RICEVUTO:", file.filename, file.content_type)
 
-            new_request = ingestion_service.create_request_ft(file)
+            new_request = ingestion_service.create_foto_request(file, request_type)
             return new_request.to_dict()
         
         except Exception as e:
@@ -126,10 +137,23 @@ class FotoResource(MethodView):
     @blp.response(200, FotoResponseSchema(many=True))
     def get(self):
         try:
-            foto_request_list = processing_service.foto_req_list()
-            return foto_request_list
-        except ValueError as e:
-            abort(400, message=f"Errore nel recupero delle richieste: {str(e)}")
+            foto_request_list = common_service.get_foto_request_all()
+            return [foto_request.to_dict() for foto_request in foto_request_list]
+        
+        except Exception as e:
+            abort(500, message=f"Errore nel recupero delle richieste: {str(e)}")
+
+    @jwt_required(fresh=True)
+    def delete(self):
+        jwt = get_jwt()
+        if not jwt.get("is_admin"):
+            abort(401, message="Richiesti privileggi di Amministratore.")
+        try:
+            deleted = common_service.cancel_foto_request_all()
+            return {"message": f"Eliminati {deleted} record"}, 200
+        except Exception as e:
+            abort(500, message=f"Internal Server Error: {str(e)}")
+
 
 @blp.route("/foto/<int:request_id>/process")
 class ProcessFoto(MethodView):

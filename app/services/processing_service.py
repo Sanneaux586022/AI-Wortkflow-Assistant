@@ -1,4 +1,4 @@
-from app.models.request import CustomerRequest, CustomerRequestFoto
+from app.models.request import MailRequest, FotoRequest
 
 class ProcessingService:
     def __init__(self, db_session, ai_service, logger):
@@ -7,7 +7,7 @@ class ProcessingService:
         self.ai = ai_service
         self.logger = logger
     
-    def process(self, request_id: int)-> CustomerRequest:
+    def process(self, request_id: int)-> MailRequest:
         self.logger.info(f"🔄 Elaborazione richiesta {request_id} iniziata...")
 
         """
@@ -19,8 +19,8 @@ class ProcessingService:
         """
 
         # 1. Recupero da Database
-        customer_request = self.db.session.query(CustomerRequest).filter(
-            CustomerRequest.id == request_id).first()
+        customer_request = self.db.session.query(MailRequest).filter(
+            MailRequest.id == request_id).first()
 
         if not customer_request:
             self.logger.error(f"❎ ID {request_id} non trovato")
@@ -55,11 +55,11 @@ class ProcessingService:
             self.logger.error(f"💥 Errore durante l'elaborazione dell'ID {request_id}: {e}")
             raise e
         
-    def predict(self, request_id: int)-> CustomerRequestFoto:
+    def predict(self, request_id: int)-> FotoRequest:
         self.logger.info(f"🔄 Elaborazione richiesta {request_id} iniziata...")
 
-        customer_request_foto = self.db.session.query(CustomerRequestFoto).filter(
-            CustomerRequestFoto.id == request_id
+        customer_request_foto = self.db.session.query(FotoRequest).filter(
+            FotoRequest.id == request_id
         ).first()
         if not customer_request_foto:
             self.logger.error(f"❎ ID {request_id} non trovato")
@@ -99,22 +99,3 @@ class ProcessingService:
             raise e
 
 
-    def foto_req_list(self)-> list[CustomerRequestFoto]:
-        
-        customer_requests_ft = self.db.session.query(CustomerRequestFoto).all()
-
-        if len(customer_requests_ft) < 1:
-            raise ValueError("Nessuna richiesta presente.")
-        
-        return [crft.to_dict() for crft in customer_requests_ft]
-        
-    def get_foto_req(self, request_id) -> CustomerRequestFoto:
-        
-        customer_req_ft = self.db.session.query(CustomerRequestFoto).filter(
-            CustomerRequestFoto.id == request_id
-        ).first()
-
-        if not customer_req_ft:
-            raise ValueError("Richiesta non trovata.")
-        
-        return customer_req_ft.to_dict()

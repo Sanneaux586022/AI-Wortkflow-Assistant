@@ -1,12 +1,12 @@
 from marshmallow import Schema, fields, validates, ValidationError
 from werkzeug.datastructures import FileStorage
 
-class RequestSchema(Schema):
-    text = fields.String(required=True, metadata={"description": "Il messaggio del cliente"})
+class MailRequestSchema(Schema):
+    mail_text = fields.String(required=True, metadata={"description": "Il messaggio del cliente"})
 
-class ResponseSchema(Schema):
+class MailResponseSchema(Schema):
     id = fields.Int(dump_only=True)
-    text = fields.Str(required=True, dump_only=True)
+    mail_text = fields.Str(required=True, dump_only=True)
     category = fields.Str(required=True, dump_only=True)
     priority = fields.Str(required=True, dump_only=True)
     suggested_reply = fields.Str(required=True, dump_only=True)
@@ -28,6 +28,7 @@ class RequestFotoSchema(Schema):
 
 class FotoResponseSchema(Schema):
     id = fields.Int(dump_only=True)
+    request_type = fields.Str(dump_only=True)
     foto_path = fields.Str(required=True, dump_only=True)
     tipo = fields.Str(required=True, dump_only=True)
     classe = fields.Str(required=True, dump_only=True)
@@ -35,7 +36,7 @@ class FotoResponseSchema(Schema):
     famiglia = fields.Str(required=True, dump_only=True)
     genere = fields.Str(required=True, dump_only=True)
     specie = fields.Str(required=True, dump_only=True)
-    pericolosità = fields.Str(required=True, dump_only=True)
+    pericolosita = fields.Str(required=True, dump_only=True)
 
     status = fields.Str(required=True, dump_only=True) 
     created_at = fields.DateTime(required=True, dump_only=True)
