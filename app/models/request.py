@@ -20,14 +20,14 @@ class BaseRequest(db.Model):
             "id": self.id,
             "request_type": self.request_type,
             "status": self.status,
-            "created_at": self.created_at.isoformat() if self.created_at else None
+            "created_at": self.created_at if self.created_at else None
         }
 
 
 class MailRequest(BaseRequest):
     __tablename__ = "mail_requests"
 
-    id = db.Column(db.Integer, db.ForeignKey("requests.id"), primary_key=True)
+    id = db.Column(db.Integer, db.ForeignKey("requests.id", ondelete="CASCADE"), primary_key=True)
     mail_text = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(50), nullable=True)
     priority = db.Column(db.String(20), nullable=True)
@@ -53,7 +53,7 @@ class MailRequest(BaseRequest):
 class FotoRequest(BaseRequest):
     __tablename__ = "foto_requests"
 
-    id = db.Column(db.Integer, db.ForeignKey("requests.id"), primary_key=True)
+    id = db.Column(db.Integer, db.ForeignKey("requests.id", ondelete="CASCADE"), primary_key=True)
     foto_path = db.Column(db.Text, nullable=False)
     tipo = db.Column(db.String(50), nullable=True)
     classe = db.Column(db.String(50), nullable=True)
@@ -62,6 +62,8 @@ class FotoRequest(BaseRequest):
     genere = db.Column(db.String(50), nullable=True)
     specie = db.Column(db.String(50), nullable=True)
     pericolosita = db.Column(db.Text, nullable=True)
+    habitat = db.Column(db.Text, nullable=True)
+    in_pericolo = db.Column(db.Text, nullable=True)
 
     __mapper_args__ = {"polymorphic_identity": "foto"}
 
@@ -76,5 +78,7 @@ class FotoRequest(BaseRequest):
             "genere": self.genere,
             "specie": self.specie,
             "pericolosita": self.pericolosita,
+            "habitat": self.habitat,
+            "in_pericolo": self.in_pericolo
         })
         return base

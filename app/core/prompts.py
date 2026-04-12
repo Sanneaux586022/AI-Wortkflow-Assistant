@@ -28,10 +28,13 @@ PROMPT_PHOTO = """
             genere: specie strettamente imparentate.
             specie: Unità biologica base, individui in grado di accoppiarsi
             pericolosità: dell'animale in foto.
+            habitat: dove vive e i periodi suoi migratori se ci sono.
+            è in pericolo:  quanti esemplari ci sono rimasti? sono in via di estinzione? perché?
 
             foto dell'animale : {text}
 
-            Rispondi ESCLUSIVAMENTE con questi dati in modo preciso e conciso.
+            Rispondi ESCLUSIVAMENTE con questi dati in modo preciso e conciso. Ma per l'habitat 
+            devi fare una breve descrizione come indicato rimanendo conciso.
             {{
                 "tipo": "string",
                 "classe": "string",
@@ -39,8 +42,9 @@ PROMPT_PHOTO = """
                 "famiglia": "string",
                 "genere": "string",
                 "specie": "string",
-                "pericolosità": "string",
-            
+                "pericolosita": "string",
+                "habitat" : "string",
+                "in_pericolo": string
             }}
 
             """

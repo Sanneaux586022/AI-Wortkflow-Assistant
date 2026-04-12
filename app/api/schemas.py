@@ -3,6 +3,7 @@ from werkzeug.datastructures import FileStorage
 
 class MailRequestSchema(Schema):
     mail_text = fields.String(required=True, metadata={"description": "Il messaggio del cliente"})
+    request_type = fields.String(required=True, metadata={"description": "Il tipo di richiesta che viene fatta."})
 
 class MailResponseSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -23,7 +24,7 @@ class FileField(fields.Field):
 
 class RequestFotoSchema(Schema):
     file = FileField(required=True)
-    richiesta = fields.Str()
+    request_type = fields.Str(required=True)
 
 
 class FotoResponseSchema(Schema):
@@ -37,6 +38,8 @@ class FotoResponseSchema(Schema):
     genere = fields.Str(required=True, dump_only=True)
     specie = fields.Str(required=True, dump_only=True)
     pericolosita = fields.Str(required=True, dump_only=True)
+    habitat = fields.Str(required=True, dump_only=True)
+    in_pericolo =fields.Str(required=True, dump_only=True)
 
     status = fields.Str(required=True, dump_only=True) 
     created_at = fields.DateTime(required=True, dump_only=True)
