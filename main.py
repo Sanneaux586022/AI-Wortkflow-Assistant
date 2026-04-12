@@ -11,8 +11,7 @@ from app.core.logger import setup_logging
 setup_logging()
 from app.api.request_routes import blp as RequestBlueprint
 from app.api.user_routes import blp as UserBlueprint
-
-# from app.errors import register_error_handlers
+from app.errors import register_error_handlers
 
 
 def create_app():
@@ -91,7 +90,7 @@ def create_app():
     # Registrazione Blueprint delle rotte
     api.register_blueprint(RequestBlueprint)
     api.register_blueprint(UserBlueprint)
-    # register_error_handlers(app)
+    register_error_handlers(app)
 
     return app
 
