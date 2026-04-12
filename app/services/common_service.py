@@ -1,4 +1,5 @@
 from app.models.request import MailRequest, FotoRequest, BaseRequest
+from sqlalchemy import text
 
 class CommonService:
     def __init__(self, db_session, logger):
@@ -41,6 +42,10 @@ class CommonService:
             for record in records:
                 self.db.session.delete(record)
             self.db.session.commit()
+            # resetta id foto request
+            self._reset_foto_db_counter()
+
+            
             self.logger.info(f"cancellati : {deleted}")
             return deleted
         except Exception as e:
@@ -68,7 +73,15 @@ class CommonService:
         except Exception as e:
             self.db.session.rollback()
             self.logger.error(f"Errore durante la cancellazione: {str(e)}")
-            raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")      
+            raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")
+        
+    def _reset_foto_db_counter(self):
+        remaining = self.db.session.query(BaseRequest).count()
+        if remaining == 0:
+            self.db.session.execute(text("ALTER SEQUENCE requests_id_seq RESTART WITH 1"))
+        
+        self.db.session.execute(text("ALTER SEQUENCE foto_requests_id_seq RESTART WITH 1"))
+        self.db.session.commit()
     
     # MAIL request methods
     def get_mail_request(self, request_id)-> MailRequest:
@@ -96,6 +109,8 @@ class CommonService:
             for record in records:
                 self.db.session.delete(record)
             self.db.session.commit()
+            # reseta il contatore
+            self._reset_mail_db_counter()
             self.logger.info(f"cancellati : {deleted}")
             return deleted
         except Exception as e:
@@ -123,4 +138,13 @@ class CommonService:
         except Exception as e:
             self.db.session.rollback()
             self.logger.error(f"Errore durante la cancellazione: {str(e)}")
-            raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")            
+            raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")
+
+    def _reset_mail_db_counter(self):
+        # Resetta requests_id_seq solo se non ci sono altri record
+        remaining = self.db.session.query(BaseRequest).count()
+        if remaining == 0:
+            self.db.session.execute(text("ALTER SEQUENCE requests_id_seq RESTART WITH 1"))
+        
+        self.db.session.execute(text("ALTER SEQUENCE mail_requests_id_seq RESTART WITH 1"))
+        self.db.session.commit()
