@@ -32,7 +32,7 @@ class ProcessingService:
         
         try:
             # 2. Chiamata all'AI Service (metodo unificato)
-            ai_results = self.ai.process_request(customer_request.text)
+            ai_results = self.ai.process_request(customer_request.mail_text)
 
             # 3. Aggiornamento dei campi del modello
             customer_request.category = ai_results.get("category")

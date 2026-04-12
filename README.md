@@ -6,14 +6,14 @@ Sistema di gestione richieste clienti con classificazione automatica tramite Goo
 
 L'applicazione riceve richieste di supporto clienti (testo o immagini), le archivia nel database e le analizza con Gemini AI per:
 
-**Richieste testo:**
+**Richieste mail:**
 - **Classificare** il tipo di richiesta (`supporto`, `vendita`, `reclamo`)
 - **Assegnare una priorità** (`bassa`, `media`, `alta`)
 - **Generare una risposta suggerita** professionale
 
 **Richieste foto (classificazione animali):**
-- **Identificare** razza, famiglia, classificazione dell'animale
-- **Descrivere** il rapporto con l'uomo e il grado di pericolosità
+- **Classificare tassonomicamente** l'animale (tipo, classe, ordine, famiglia, genere, specie)
+- **Descrivere** pericolosità, habitat e stato di conservazione
 
 ## Stack tecnologico
 
@@ -109,16 +109,16 @@ Con l'app avviata, visita: `http://localhost:5000/docs/swagger-ui`
 | `POST` | `/users/refresh` | Rinnova l'access token | Refresh token |
 | `POST` | `/users/logout` | Revoca il token corrente | Access token (fresh) |
 
-### Richieste testo (`/requests`)
+### Richieste mail (`/requests`)
 
 | Metodo | Endpoint | Descrizione | Token richiesto |
 |---|---|---|---|
-| `POST` | `/requests` | Crea una nuova richiesta testo | Access token |
-| `GET` | `/requests` | Elenca tutte le richieste testo | Access token |
-| `GET` | `/requests/<id>` | Dettaglio di una richiesta testo | Access token |
+| `POST` | `/requests` | Crea una nuova richiesta mail | Access token |
+| `GET` | `/requests` | Elenca tutte le richieste mail | Access token |
+| `GET` | `/requests/<id>` | Dettaglio di una singola richiesta mail | Access token |
 | `POST` | `/requests/<id>/process` | Avvia elaborazione AI | Access token (fresh) |
-| `DELETE` | `/requests` | Elimina **tutte** le richieste | Admin + fresh token |
-| `DELETE` | `/requests/<id>` | Elimina una singola richiesta | Admin + fresh token |
+| `DELETE` | `/requests` | Elimina **tutte** le richieste mail | Admin + fresh token |
+| `DELETE` | `/requests/<id>` | Elimina una singola richiesta mail | Admin + fresh token |
 
 ### Richieste foto (`/requests/foto`)
 
@@ -126,8 +126,10 @@ Con l'app avviata, visita: `http://localhost:5000/docs/swagger-ui`
 |---|---|---|---|
 | `POST` | `/requests/foto` | Carica una foto (multipart/form-data, campo `file`) | Access token |
 | `GET` | `/requests/foto` | Elenca tutte le richieste foto | Access token |
-| `GET` | `/requests/foto/<id>` | Dettaglio di una richiesta foto | Access token |
+| `GET` | `/requests/foto/<id>` | Dettaglio di una singola richiesta foto | Access token |
 | `POST` | `/requests/foto/<id>/process` | Avvia classificazione AI dell'immagine | Access token (fresh) |
+| `DELETE` | `/requests/foto` | Elimina **tutte** le richieste foto | Admin + fresh token |
+| `DELETE` | `/requests/foto/<id>` | Elimina una singola richiesta foto | Admin + fresh token |
 
 ---
 
@@ -144,12 +146,12 @@ curl -X POST http://localhost:5000/users/login \
   -H "Content-Type: application/json" \
   -d '{"username": "mario", "password": "password123"}'
 
-# 3. Crea una richiesta cliente
+# 3. Crea una richiesta mail
 curl -X POST http://localhost:5000/requests \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
-  -d '{"text": "Non riesco ad accedere al mio account, ho bisogno di aiuto urgente."}'
-# → risposta: {"id": 1, "status": "pending", ...}
+  -d '{"mail_text": "Non riesco ad accedere al mio account.", "request_type": "mail"}'
+# → risposta: {"id": 1, "status": "pending", "mail_text": "...", ...}
 
 # 4. Avvia l'elaborazione AI sulla richiesta con id=1
 # (richiede fresh token: riesegui il login per ottenerne uno nuovo)
@@ -157,16 +159,29 @@ curl -X POST http://localhost:5000/requests/1/process \
   -H "Authorization: Bearer <fresh_access_token>"
 # → risposta: {"category": "supporto", "priority": "alta", "suggested_reply": "..."}
 
-# 5. Carica una foto di un animale
+# 5. Carica una foto di un animale (multipart/form-data)
 curl -X POST http://localhost:5000/requests/foto \
   -H "Authorization: Bearer <access_token>" \
-  -F "file=@/percorso/del/file/immagine.jpg"
+  -F "file=@/percorso/immagine.jpg" \
+  -F "request_type=foto"
 # → risposta: {"id": 1, "status": "pending", "foto_path": "...", ...}
 
 # 6. Avvia la classificazione AI della foto con id=1
 curl -X POST http://localhost:5000/requests/foto/1/process \
   -H "Authorization: Bearer <fresh_access_token>"
-# → risposta: {"classificazione": "Mammifero", "razza": "...", "famiglia": "...", ...}
+# → risposta:
+# {
+#   "tipo": "Mammifero",
+#   "classe": "Mammalia",
+#   "ordine": "Carnivora",
+#   "famiglia": "Felidae",
+#   "genere": "Panthera",
+#   "specie": "Panthera tigris",
+#   "pericolosita": "Alta",
+#   "habitat": "Foreste tropicali e subtropicali dell'Asia",
+#   "in_pericolo": "In pericolo critico — circa 3.900 esemplari selvatici",
+#   "status": "processed"
+# }
 ```
 
 ---
@@ -205,11 +220,11 @@ ai-workflow-assistant/
 ├── docker-compose.yml
 ├── .env                         # Segreti locali (NON committare)
 ├── .env.example                 # Template variabili d'ambiente
-├── smoke_test.py                # Script di test manuale
+├── smoke_test.py                # Script di test manuale end-to-end
 ├── multimedia/
 │   └── uploads/                 # Foto caricate dagli utenti
 └── app/
-    ├── errors.py                # Handler di errore globali (attualmente disabilitato)
+    ├── errors.py                # Handler di errore globali
     ├── core/
     │   ├── config.py            # Configurazione centralizzata (legge da .env)
     │   ├── logger.py            # Setup logging
@@ -218,18 +233,55 @@ ai-workflow-assistant/
     │   ├── database.py          # Istanza SQLAlchemy condivisa
     │   └── redis_client.py      # Helper connessione Redis
     ├── models/
-    │   ├── request.py           # Modelli ORM: CustomerRequest, CustomerRequestFoto
+    │   ├── request.py           # Modelli ORM: BaseRequest, MailRequest, FotoRequest
     │   └── user.py              # Modello ORM: User
     ├── api/
-    │   ├── request_routes.py    # Blueprint endpoint /requests
+    │   ├── request_routes.py    # Blueprint endpoint /requests e /requests/foto
     │   ├── user_routes.py       # Blueprint endpoint /users
     │   └── schemas.py           # Schemi Marshmallow (validazione I/O)
     └── services/
         ├── ai_service.py        # Integrazione Google Gemini API
-        ├── ingestion_service.py # Creazione e salvataggio richieste
-        ├── processing_service.py# Orchestrazione pipeline AI
+        ├── ingestion_service.py # Creazione e salvataggio richieste (mail e foto)
+        ├── processing_service.py# Orchestrazione pipeline AI (process / predict)
+        ├── common_service.py    # Lettura e cancellazione record dal DB
         └── user_service.py      # Registrazione, login, token
 ```
+
+## Modelli dati
+
+### MailRequest
+
+| Campo | Tipo | Descrizione |
+|---|---|---|
+| `id` | Integer | Chiave primaria (ereditata da BaseRequest) |
+| `request_type` | String | Sempre `"mail"` |
+| `status` | String | `pending` → `processed` / `error` |
+| `mail_text` | Text | Testo originale della mail del cliente |
+| `category` | String | `supporto`, `vendita`, `reclamo` (compilato dall'AI) |
+| `priority` | String | `bassa`, `media`, `alta` (compilato dall'AI) |
+| `suggested_reply` | Text | Risposta suggerita dall'AI |
+| `extracted_data` | Text | Dati strutturati estratti (opzionale) |
+| `feedback` | Text | Feedback dell'operatore (opzionale) |
+| `created_at` | DateTime | Timestamp creazione |
+
+### FotoRequest
+
+| Campo | Tipo | Descrizione |
+|---|---|---|
+| `id` | Integer | Chiave primaria (ereditata da BaseRequest) |
+| `request_type` | String | Sempre `"foto"` |
+| `status` | String | `pending` → `processed` / `error` |
+| `foto_path` | Text | Path del file salvato su disco |
+| `tipo` | String | Suddivisione per piano strutturale (es. Mammifero) |
+| `classe` | String | Classe biologica (es. Mammalia) |
+| `ordine` | String | Ordine (es. Carnivora) |
+| `famiglia` | String | Famiglia (es. Felidae) |
+| `genere` | String | Genere (es. Panthera) |
+| `specie` | String | Specie completa (es. Panthera tigris) |
+| `pericolosita` | Text | Grado di pericolosità per l'uomo |
+| `habitat` | Text | Descrizione habitat e migrazioni |
+| `in_pericolo` | Text | Stato di conservazione e numero esemplari |
+| `created_at` | DateTime | Timestamp creazione |
 
 ## Architettura
 
@@ -245,16 +297,17 @@ Client HTTP
                ▼
 ┌─────────────────────────────────────┐
 │  Service Layer                      │  ← logica di business
-│  ingestion / processing / user      │
+│  ingestion / processing /           │
+│  common / user                      │
 └──────┬──────────────┬───────────────┘
        │              │
        ▼              ▼
 ┌────────────┐  ┌─────────────────────┐
 │ SQLAlchemy │  │  Google Gemini API  │
-│ (SQLite /  │  │  (classificazione + │
-│ PostgreSQL)│  │   risposta suggerita│
-└────────────┘  └─────────────────────┘
-       │
+│ (SQLite /  │  │  - process_request  │
+│ PostgreSQL)│  │  - process_request  │
+└────────────┘  │    _image_description│
+       │        └─────────────────────┘
        ▼
 ┌────────────┐
 │   Redis    │  ← token blocklist (logout)
