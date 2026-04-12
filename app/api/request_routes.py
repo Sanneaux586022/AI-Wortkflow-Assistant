@@ -42,8 +42,8 @@ class RequestsResource(MethodView):
     @jwt_required()
     @blp.response(200, ResponseSchema(many=True))
     def get(self):
-        """ Ritorna la lista di tutte le richieste nel Database"""
-        requests = ingestion_service.get_all_request_cr()
+        """Ritorna la lista di tutte le richieste mail nel Database"""
+        requests = common_service.get_mail_request_all()
         if requests:
             return [req.to_dict() for req in requests]
         abort(400, message="Nessun record presente.")
@@ -181,6 +181,22 @@ class RequestFotoDetail(MethodView):
             return foto_processed
         except ValueError as e:
             abort(400, message=f"Errore nel recupero della richiesta: {str(e)}")
+    
+    @jwt_required(fresh=True)
+    def delete(self, request_id):
+        # Controllo se la richiesta esiste prima 
+        # di provare a rimuoverla
+        
+        jwt = get_jwt()
+        if not jwt.get("is_admin"):
+            abort(401, message="Richiesti privileggi di Amministratore.")
+        try:
+            common_service.cancel_foto_request(request_id)
+            return {"message": "Richiesta correttamente cancellata."}
+        except RuntimeError as e:
+            abort(500 , message=f"Errore durante la cancellazione: {str(e)}")
+        except LookupError as e:
+            abort(404 , message=f"Errore durante la cancellazione: {str(e)}")       
     
 
 
