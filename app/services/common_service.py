@@ -5,7 +5,7 @@ class CommonService:
         
         self.db = db_session
         self.logger = logger
-
+    # Tutte le richieste.
     def get_all_request(self)-> list[BaseRequest]:
         requests = self.db.session.query(BaseRequest).all()
 
@@ -30,12 +30,16 @@ class CommonService:
         
         return request_foto
     
-    def cancel_foto_request_all(self):
+    def delete_foto_request_all(self):
         """
         Cancella tutte le richieste Mail nel database.
         """
         try:
-            deleted = self.db.session.query(FotoRequest).delete()
+            records = self.db.session.query(FotoRequest).all()
+            deleted = len(records)
+
+            for record in records:
+                self.db.session.delete(record)
             self.db.session.commit()
             self.logger.info(f"cancellati : {deleted}")
             return deleted
@@ -44,18 +48,17 @@ class CommonService:
             self.logger.error(f"Errore durante la cancellazione: {str(e)}")
             raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")
         
-    def cancel_foto_request(self, request_id):
+    def delete_foto_request(self, request_id):
 
         """
         Cancella la singola reques partendo dal request_id
         """
 
-        deleted = self.db.session.query(FotoRequest).filter(
-                MailRequest.id == request_id
-            ).first()
+        deleted = self.db.session.query(FotoRequest).filter(MailRequest.id == request_id).first()
+        
         if not deleted:
-                self.logger.info(f"Richiesta {request_id} non trovata.")
-                raise LookupError("Impossibile cancellare la richiesta.")
+            self.logger.info(f"Richiesta {request_id} non trovata.")
+            raise LookupError("Impossibile cancellare la richiesta.")
         
         try :
 
@@ -83,12 +86,15 @@ class CommonService:
         """
         return self.db.session.query(MailRequest).all()
     
-    def cancel_mail_request_all(self):
+    def delete_mail_request_all(self):
         """
         Cancella tutte le richieste Mail nel database.
         """
         try:
-            deleted = self.db.session.query(MailRequest).delete()
+            records = self.db.session.query(MailRequest).all()
+            deleted = len(records)
+            for record in records:
+                self.db.session.delete(record)
             self.db.session.commit()
             self.logger.info(f"cancellati : {deleted}")
             return deleted
@@ -97,18 +103,17 @@ class CommonService:
             self.logger.error(f"Errore durante la cancellazione: {str(e)}")
             raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")
         
-    def cancel_mail_request(self, request_id):
+    def delete_mail_request(self, request_id):
 
         """
         Cancella la singola reques partendo dal request_id
         """
 
-        deleted = self.db.session.query(MailRequest).filter(
-                MailRequest.id == request_id).first()
+        deleted = self.db.session.query(MailRequest).filter(MailRequest.id == request_id).first()
         
-        if not deleted:
-                self.logger.info(f"Richiesta {request_id} non trovata.")
-                raise LookupError("Impossibile cancellare la richiesta.")
+        if not deleted:   
+            self.logger.info(f"Richiesta {request_id} non trovata.")
+            raise LookupError("Impossibile cancellare la richiesta.")
         
         try :
 

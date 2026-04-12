@@ -22,6 +22,8 @@ class UserService:
         )
         if 'is_admin' in user_data:
             new_user.is_admin = user_data['is_admin']
+        else:
+            new_user.is_admin = False
         try:
             self.db.session.add(new_user)
             self.db.session.commit()
@@ -29,7 +31,7 @@ class UserService:
             return new_user
         except IntegrityError:
             self.db.session.rollback()
-            raise ValueError("Utente esistente, provare con dati diversi")
+            raise
     
     def user_login(self, user_data):
         

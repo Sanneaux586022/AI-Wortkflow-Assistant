@@ -80,7 +80,10 @@ class ProcessingService:
             customer_request_foto.famiglia = ai_results.get("famiglia")
             customer_request_foto.genere = ai_results.get("genere")
             customer_request_foto.specie = ai_results.get("specie")
-            customer_request_foto.pericolosità = ai_results.get("pericolosità")
+            customer_request_foto.pericolosita = ai_results.get("pericolosita")
+            customer_request_foto.habitat = ai_results.get("habitat")
+            customer_request_foto.in_pericolo = ai_results.get("in_pericolo")
+            
 
             # 4. Cambia Stato
             customer_request_foto.status = "processed"
