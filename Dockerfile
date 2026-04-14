@@ -15,6 +15,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copia i file di definizione (fondamentale copiare uv.lock!)
 COPY pyproject.toml uv.lock ./
 

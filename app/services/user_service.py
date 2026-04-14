@@ -2,7 +2,7 @@ from datetime import timezone, datetime
 from app.models.user import User
 from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import IntegrityError
-from app.db.redis_client import get_redis
+from app.core.redis_client import get_redis
 from flask_jwt_extended import create_access_token, get_jwt, create_refresh_token, get_jwt_identity
 
 

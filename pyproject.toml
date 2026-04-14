@@ -16,7 +16,9 @@ dependencies = [
     "psycopg2-binary",
     "requests",
     "google-genai",
-    "rq"
+    "rq",
+    "flask-limiter[redis]",
+    "python-magic"
 ]
 
 [project.optional-dependencies]
