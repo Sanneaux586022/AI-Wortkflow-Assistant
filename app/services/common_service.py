@@ -50,7 +50,7 @@ class CommonService:
             return deleted
         except Exception as e:
             self.db.session.rollback()
-            self.logger.error(f"Errore durante la cancellazione: {str(e)}")
+            self.logger.error(f"Errore durante la cancellazione: {str(e)}", exc_info=True)
             raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")
         
     def delete_foto_request(self, request_id):
@@ -72,7 +72,7 @@ class CommonService:
             self.logger.info(f"Richiesta {request_id} eliminata correttamente.")
         except Exception as e:
             self.db.session.rollback()
-            self.logger.error(f"Errore durante la cancellazione: {str(e)}")
+            self.logger.error(f"Errore durante la cancellazione: {str(e)}", exc_info=True)
             raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")
         
     def _reset_foto_db_counter(self):
@@ -115,7 +115,7 @@ class CommonService:
             return deleted
         except Exception as e:
             self.db.session.rollback()
-            self.logger.error(f"Errore durante la cancellazione: {str(e)}")
+            self.logger.error(f"Errore durante la cancellazione: {str(e)}", exc_info=True)
             raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")
         
     def delete_mail_request(self, request_id):
@@ -137,7 +137,7 @@ class CommonService:
             self.logger.info(f"Richiesta {request_id} eliminata correttamente.")
         except Exception as e:
             self.db.session.rollback()
-            self.logger.error(f"Errore durante la cancellazione: {str(e)}")
+            self.logger.error(f"Errore durante la cancellazione: {str(e)}", exc_info=True)
             raise RuntimeError(f"Errore durante la cancellazione: {str(e)}")
 
     def _reset_mail_db_counter(self):

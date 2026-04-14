@@ -7,6 +7,7 @@ from app.core.logger import get_logger
 from app.db.database import db
 from app.services.user_service import UserService
 from app.core.extensions import limiter
+from app.workers.tasks import send_user_registration_email
 
 blp = Blueprint(
     "Users", "users", url_prefix="/users", description="Operazioni sugli utenti."
@@ -24,6 +25,15 @@ class UserRegister(MethodView):
         Registra un nuovo utente.
         """
         user = user_service.user_create(user_data)
+        try:
+            current_app.send_email_queue.enqueue(
+                send_user_registration_email,
+                user.username,
+                user.email
+            )
+        except Exception as e:
+            # Logga l'errore ma non bloccare la risposta
+            logger.error(f"Errore accodamento email per {user.email}: {str(e)}", exc_info=True)
 
         return {"message": "Utente creato corretamente.", "id": user.id}, 201
 

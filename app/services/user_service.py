@@ -62,5 +62,6 @@ class UserService:
             get_redis().set(jti, "revoked", ex=remaining)
             return "utente correttamente scollegato!"
         except Exception as e:
+            self.logger.error(f"Errore durante il logout: {str(e)}", exc_info=True)
             raise ValueError(f"Errore durante il logout: {str(e)}")
 

@@ -22,7 +22,7 @@ def create_app():
     app.redis = redis.from_url(Config.REDIS_URL)
     app.mail_queue = Queue("mail_processing", connection=app.redis)
     app.foto_queue = Queue("foto_processing", connection=app.redis)
-    app.email_queue = Queue("emails", connection=app.redis)
+    app.send_email_queue = Queue("emails", connection=app.redis)
 
     # Inizializziamo il db
     db.init_app(app)

@@ -7,23 +7,20 @@ from werkzeug.exceptions import HTTPException
 from app.api.schemas import FotoResponseSchema, MailRequestSchema, MailResponseSchema
 from app.core.logger import get_logger
 from app.db.database import db
-from app.services.ai_service import AIService
+# from app.services.ai_service import AIService
 from app.services.common_service import CommonService
 from app.services.ingestion_service import IngestionService
-from app.services.processing_service import ProcessingService
+# from app.services.processing_service import ProcessingService
 from app.core.extensions import limiter
+from app.workers.tasks import process_foto_task, process_mail_task
 
 logger = get_logger("request_routes")
 blp = Blueprint(
     "requests", "requests", description="Operazioni requests", url_prefix="/requests"
 )
 
-ai_engine = AIService(logger=logger)
 ingestion_service = IngestionService(db_session=db, logger=logger)
 common_service = CommonService(db_session=db, logger=logger)
-processing_service = ProcessingService(
-    db_session=db, ai_service=ai_engine, logger=logger
-)
 
 
 @blp.route("")
@@ -80,6 +77,7 @@ class MailDetailResource(MethodView):
         except Exception as e:
             abort(404, message=f"Errore: {str(e)}")
 
+   
     @jwt_required(fresh=True)
     def delete(self, request_id):
         """
@@ -112,8 +110,8 @@ class ProcessMailResource(MethodView):
         if request.status == "processed":
             abort(400, message="Questa richiesta è già stata elaborata.")
 
-        current_app.email_queue.enqueue(
-            processing_service.process,
+        current_app.mail_queue.enqueue(
+            process_mail_task,
             request_id
         )
         return {"message": f"Richiesta {request_id} in elaborazione."}, 202
@@ -142,6 +140,7 @@ class FotoResource(MethodView):
         except HTTPException:
             raise
         except Exception as e:
+            logger.error(f"Errore foto: {str(e)}", exc_info=True)
             abort(500, message=f"Errore durante la creazione della richiesta: {str(e)}")
 
     @jwt_required()
@@ -154,6 +153,7 @@ class FotoResource(MethodView):
         foto_request_list = common_service.get_foto_request_all()
         return foto_request_list
 
+   
     @jwt_required(fresh=True)
     def delete(self):
         """
@@ -184,6 +184,7 @@ class FotoDetailResource(MethodView):
         except LookupError as e:
             abort(404, message=str(e))
 
+   
     @jwt_required(fresh=True)
     def delete(self, request_id):
         """
@@ -216,7 +217,7 @@ class ProcessFotoResource(MethodView):
             abort(400, message="Questa richiesta è gia stata processata.")
 
         current_app.foto_queue.enqueue(
-            processing_service.predict,
+            process_foto_task,
             request_id
         )
         return {"message": f"Richiesta {request_id} in elaborazione."}, 202

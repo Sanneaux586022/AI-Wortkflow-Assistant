@@ -3,7 +3,7 @@ import os
 from app.models.request import FotoRequest, MailRequest
 from werkzeug.utils import secure_filename
 import magic
-ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "avif"}
 MAX_SIZE = 5 * 1024 * 1024
 
 
@@ -37,7 +37,7 @@ class IngestionService:
             return new_mail_request
         except Exception as e:
             self.db.session.rollback()
-            self.logger.error(f"❎ Errore DB in IngestionService in : {str(e)}")
+            self.logger.error(f"❎ Errore DB in IngestionService in : {str(e)}", exc_info=True)
             self.logger.error(f"Errore durante il salvataggio richiesta mail: {str(e)}")
             raise RuntimeError(f"Errore durante il salvataggio richiesta mail: {str(e)}")
     
@@ -71,10 +71,9 @@ class IngestionService:
             if os.path.exists(save_path):
                 os.remove(save_path)
             self.db.session.rollback()
-            self.logger.error(f"Errore durante il salvataggio richiesta foto: {str(e)}")
+            self.logger.error(f"Errore durante il salvataggio richiesta foto: {str(e)}", exc_info=True)
             raise RuntimeError(f"Errore durante il salvataggio richiesta foto: {str(e)}")
 
-    import magic
 
     def _validate_file(self, file):
         # Controlla dimensione
@@ -88,7 +87,8 @@ class IngestionService:
         header = file.read(2048)  # legge i primi bytes
         file.seek(0)
         mime_type = magic.from_buffer(header, mime=True)
-        if mime_type not in {"image/jpeg", "image/png", "image/webp"}:
+        if mime_type not in {"image/jpeg", "image/png", "image/webp","image/avif"}:
+            self.logger.info(f"🔍 mime_type rilevato: {mime_type}") 
             raise ValueError("Il file non è un'immagine valida.")
         
         # Controlla estensione
