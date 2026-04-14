@@ -20,7 +20,9 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     app.redis = redis.from_url(Config.REDIS_URL)
-    app.queue = Queue("users", connection=app.redis)
+    app.mail_queue = Queue("mail_processing", connection=app.redis)
+    app.foto_queue = Queue("foto_processing", connection=app.redis)
+    app.email_queue = Queue("emails", connection=app.redis)
 
     # Inizializziamo il db
     db.init_app(app)
@@ -35,16 +37,70 @@ def create_app():
 
     jwt = JWTManager(app)
 
-    # ... tutti i tuoi jwt callbacks rimangono invariati ...
+    @jwt.token_in_blocklist_loader
+    def check_if_token_in_blocklist(jwt_header, jwt_payload):
+        jti = jwt_payload['jti']
+        return app.redis.get(jti) is not None
+    
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        return (
+            jsonify({
+                "description": "The token has been revoked.", "error": "token_revoked"
+            }), 401
+        )
+    
+    @jwt.needs_fresh_token_loader
+    def token_not_fresh_callback(jwt_header, jwt_payload):
+        return (
+            jsonify({
+                "description": "The token is not fresh.",
+                "error": "fresh_token_required."
+            }), 401
+        )
+
+    @jwt.additional_claims_loader
+    def add_claims_to_jwt(identity):
+        # Look in the database and see whether the user is an admin 
+        user = User.query.get(int(identity))
+  
+        return {"is_admin": user.is_admin}
+
+
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return (
+            jsonify({"message": "Il token è scaduto", "error": "token_scaduto"}),
+            401
+        )
+    
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return (
+            jsonify({"message": "Verifica della firma non riuscita", "error": "token_non_valido"}),
+            401
+        )
+    
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return(
+            jsonify(
+                {
+                    "description": "La richiesta non contiene un token di accesso.", 
+                    "error": "Richiesta_autorizzazione."
+                }
+            ),
+            401
+        )
 
     # Registrazione Blueprint
     api.register_blueprint(RequestBlueprint)
     api.register_blueprint(UserBlueprint)
     register_error_handlers(app)
 
-    return app, limiter  # ← restituiamo anche limiter
+    return app
 
-app, limiter = create_app()
+app = create_app()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

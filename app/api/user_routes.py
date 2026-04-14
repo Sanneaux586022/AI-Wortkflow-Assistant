@@ -1,6 +1,7 @@
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required
 from flask_smorest import Blueprint, abort
+from flask import current_app
 from app.api.schemas import UserLoginSchema, UserRegisterSchema
 from app.core.logger import get_logger
 from app.db.database import db

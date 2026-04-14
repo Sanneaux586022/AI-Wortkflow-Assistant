@@ -1,4 +1,4 @@
-from flask import request
+from flask import request, current_app
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
@@ -101,7 +101,6 @@ class MailDetailResource(MethodView):
 class ProcessMailResource(MethodView):
     @jwt_required(fresh=True)
     @limiter.limit("5 per minute")
-    @blp.response(200, MailResponseSchema)
     def post(self, request_id):
         """Scatena l'elaborazione AI per una richiesta Mail specifica"""
 
@@ -113,12 +112,11 @@ class ProcessMailResource(MethodView):
         if request.status == "processed":
             abort(400, message="Questa richiesta è già stata elaborata.")
 
-        try:
-            # Il processingService si occupa di chiamare l'AI Service aggiornare il DB
-            processed_request = processing_service.process(request_id)
-            return processed_request
-        except Exception as e:
-            abort(500, message=f"Errore durante l'elaborazione AI : {str(e)}")
+        current_app.email_queue.enqueue(
+            processing_service.process,
+            request_id
+        )
+        return {"message": f"Richiesta {request_id} in elaborazione."}, 202
 
 
 @blp.route("/foto")
@@ -207,7 +205,6 @@ class FotoDetailResource(MethodView):
 class ProcessFotoResource(MethodView):
     @jwt_required(fresh=True)
     @limiter.limit("5 per minute")
-    @blp.response(200, FotoResponseSchema)
     def post(self, request_id):
         """Scatena l'elaborazione AI per una richiesta Foto specifica"""
         try:
@@ -218,9 +215,8 @@ class ProcessFotoResource(MethodView):
         if foto.status == "processed":
             abort(400, message="Questa richiesta è gia stata processata.")
 
-        try:
-            # Il processingService si occupa di chiamare l'AI Servicee aggiornare il DB
-            foto_processed = processing_service.predict(request_id)
-            return foto_processed
-        except Exception as e:
-            abort(500, message=f"Errore durante l'elaborazione AI : {str(e)}")
+        current_app.foto_queue.enqueue(
+            processing_service.predict,
+            request_id
+        )
+        return {"message": f"Richiesta {request_id} in elaborazione."}, 202
