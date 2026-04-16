@@ -112,3 +112,29 @@ def auth_headers(client):
     })
     token = resp.get_json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIXTURE: header JWT pronti all'uso
+# Registra un utente admin di test, fa login, e restituisce l'header Authorization.
+# ─────────────────────────────────────────────────────────────────────────────
+@pytest.fixture()
+def admin_headers(client):
+    """
+    Restituisce gli header HTTP con un token JWT valido.
+    Da usare nei test che richiedono autenticazione ed un utente admin:
+
+        def test_qualcosa(client, admin_headers):
+            resp = client.get("/requests", headers=admin_headers)
+    """
+    client.post("/users/register", json={
+        "username": "testuser_admin",
+        "email": "test_admin@example.com",
+        "password": "password123",
+        "is_admin": True
+    })
+    resp = client.post("/users/login", json={
+        "username": "testuser_admin",
+        "password": "password123",
+    })
+    token = resp.get_json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}

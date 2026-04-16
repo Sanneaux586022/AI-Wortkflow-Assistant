@@ -27,7 +27,9 @@ import io
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
+from app.db.database import db
 from app.models.request import MailRequest, FotoRequest
+from app.workers.tasks import process_mail_task
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -188,33 +190,19 @@ class TestElaborazioneAImail:
 
         _ts = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
-        with patch("app.services.processing_service.ProcessingService.process") as mock_process:
-            fake_result = MagicMock(spec=MailRequest)
-            fake_result.id = req_id
-            fake_result.mail_text = "Non riesco a fare login"
-            fake_result.status = "processed"
-            fake_result.category = "supporto"
-            fake_result.priority = "alta"
-            fake_result.suggested_reply = "Abbiamo resettato la tua password."
-            fake_result.extracted_data = None
-            fake_result.feedback = None
-            fake_result.created_at = _ts
-            mock_process.return_value = fake_result
-
+        with patch("flask.current_app.mail_queue") as mock_queue:
             resp = client.post(f"/requests/{req_id}/process", headers=auth_headers)
-
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["status"] == "processed"
-        assert data["category"] == "supporto"
-        assert data["priority"] == "alta"
+            mock_queue.enqueue.assert_called_once_with(process_mail_task, req_id)
+        
+        # Verifica la risposta HTTP
+            assert resp.status_code == 202
 
     def test_process_richiesta_inesistente_ritorna_404(self, client, auth_headers):
         """Elaborare un ID inesistente deve restituire 404."""
         resp = client.post("/requests/99999/process", headers=auth_headers)
         assert resp.status_code == 404
 
-    def test_process_richiesta_gia_elaborata_ritorna_400(self, client, auth_headers):
+    def test_process_richiesta_gia_elaborata_ritorna_400(self, client,app, auth_headers):
         """
         Una richiesta già processata (status='processed') non deve essere
         rielaborata → 400 Bad Request.
@@ -231,17 +219,20 @@ class TestElaborazioneAImail:
         )
         req_id = create_resp.get_json()["id"]
 
-        # Prima chiamata: AI mockato → service aggiorna il DB a "processed"
-        with patch("app.services.ai_service.AIService.process_request", return_value={
-            "category": "supporto",
-            "priority": "bassa",
-            "suggested_reply": "Messaggio di conferma.",
-        }):
-            client.post(f"/requests/{req_id}/process", headers=auth_headers)
+        # Aggiorno manualmente la richiesta su db
+        with app.app_context():
+            req = db.session.get(MailRequest, req_id)
+            req.status = "processed"
+            db.session.commit()
 
         # Seconda chiamata: status nel DB è ora "processed" → route risponde 400
-        resp = client.post(f"/requests/{req_id}/process", headers=auth_headers)
-        assert resp.status_code == 400
+        with patch("main.app.mail_queue") as mock_queue:
+            resp = client.post(f"/requests/{req_id}/process", headers=auth_headers)
+            mock_queue.enqueue.assert_not_called()
+        
+            # Verifica la risposta HTTP
+            assert resp.status_code == 400
+
 
     def test_senza_autenticazione_ritorna_401(self, client):
         resp = client.post("/requests/1/process")
@@ -337,3 +328,18 @@ class TestEndpointProtetti:
             "Authorization": "Bearer questo-non-e-un-token-jwt-valido"
         })
         assert resp.status_code == 401
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST: Protezione generale degli endpoint per admin
+# ─────────────────────────────────────────────────────────────────────────────
+class TestEndpointAdmin:
+    """
+    Verifica che tutti  gli endpoint solo per admin rifiutino qualsiasi chiamata di altri utenti.
+    """
+    def test_delete_all_mail_requests_utente_admin(self, client, auth_headers):
+        """Utente registrato ma non admin."""
+        resp = client.delete("/requests", headers=auth_headers)
+        assert resp.status_code == 401
+
+
+

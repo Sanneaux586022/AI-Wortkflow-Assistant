@@ -33,6 +33,23 @@ class TestRegistrazione:
         assert "id" in data
         assert data["id"] is not None
 
+    def test_registrazione_nuovo_utente_admin_ritorna_201(self, client):
+        """
+        Caso normale: registrazione con dati validi.
+        La risposta deve essere 201 Created con l'ID dell'utente.
+        """
+        resp = client.post("/users/register", json={
+            "username": "rossi_admin",
+            "email": "rossi_admin@example.com",
+            "password": "password123",
+            "is_admin": True
+        })
+
+        assert resp.status_code == 201
+        data = resp.get_json()
+        assert "id" in data
+        assert data["id"] is not None
+        
     def test_username_duplicato_ritorna_409(self, client):
         """
         Se un utente con lo stesso username esiste già, deve rispondere 409 Conflict.

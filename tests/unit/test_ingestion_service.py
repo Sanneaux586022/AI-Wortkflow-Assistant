@@ -54,6 +54,8 @@ def mock_file():
     """
     f = MagicMock()
     f.filename = "tigras.jpeg"
+    f.tell.return_value = 1024  # ← dimensione in bytes (1KB)
+    f.read.return_value = b'\xff\xd8\xff'  # ← magic bytes di un JPEG
     return f
 
 
@@ -120,9 +122,12 @@ class TestCreateFotoRequest:
         """
         Caso normale: il file viene salvato su disco e il record viene inserito nel DB.
         """
+     
         with patch("app.services.ingestion_service.secure_filename", return_value="tigras.jpeg"), \
              patch.object(mock_file, "save"):
-            service.create_foto_request(mock_file, "foto")
+                with patch("app.services.ingestion_service.magic.from_buffer", return_value="image/jpeg"):
+                    service.create_foto_request(mock_file, "foto")   
+            # service.create_foto_request(mock_file, "foto")
 
         mock_db.session.add.assert_called_once()
         mock_db.session.commit.assert_called_once()
@@ -133,7 +138,8 @@ class TestCreateFotoRequest:
         """
         with patch("app.services.ingestion_service.secure_filename", return_value="tigras.jpeg"), \
              patch.object(mock_file, "save"):
-            service.create_foto_request(mock_file, "foto")
+                with patch("app.services.ingestion_service.magic.from_buffer", return_value="image/jpeg"):
+                    service.create_foto_request(mock_file, "foto")   
 
         salvato = mock_db.session.add.call_args[0][0]
         assert salvato.foto_path == "/app/multimedia/uploads/tigras.jpeg"
@@ -142,7 +148,8 @@ class TestCreateFotoRequest:
         """Una foto appena caricata deve avere status="pending"."""
         with patch("app.services.ingestion_service.secure_filename", return_value="tigras.jpeg"), \
              patch.object(mock_file, "save"):
-            service.create_foto_request(mock_file, "foto")
+                with patch("app.services.ingestion_service.magic.from_buffer", return_value="image/jpeg"):
+                    service.create_foto_request(mock_file, "foto") 
 
         salvato = mock_db.session.add.call_args[0][0]
         assert salvato.status == "pending"
@@ -154,8 +161,9 @@ class TestCreateFotoRequest:
 
         with patch("app.services.ingestion_service.secure_filename", return_value="tigras.jpeg"), \
              patch.object(mock_file, "save"):
-            with pytest.raises(ValueError, match="Errore durante la cancellazione"):
-                service.create_foto_request(mock_file, "foto")
+            with pytest.raises(RuntimeError, match="Errore durante il salvataggio richiesta foto"):
+                with patch("app.services.ingestion_service.magic.from_buffer", return_value="image/jpeg"):
+                    service.create_foto_request(mock_file, "foto")
 
         mock_db.session.rollback.assert_called_once()
 
@@ -167,7 +175,8 @@ class TestCreateFotoRequest:
         with patch("app.services.ingestion_service.secure_filename",
                    return_value="safe_name.jpg") as mock_secure, \
              patch.object(mock_file, "save"):
-            service.create_foto_request(mock_file, "foto")
+                with patch("app.services.ingestion_service.magic.from_buffer", return_value="image/jpeg"):
+                    service.create_foto_request(mock_file, "foto")
 
         mock_secure.assert_called_once_with(mock_file.filename)
         salvato = mock_db.session.add.call_args[0][0]
