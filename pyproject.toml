@@ -18,7 +18,9 @@ dependencies = [
     "google-genai",
     "rq",
     "flask-limiter[redis]",
-    "python-magic"
+    "python-magic",
+    "flask-cors",
+    "jinja2",
 ]
 
 [project.optional-dependencies]
@@ -28,9 +30,11 @@ dev = [
     "pytest-cov",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
 [tool.pytest.ini_options]
-# Pytest cerca i test nella cartella "tests/"
 testpaths = ["tests"]
-# Mostra print() nei test che falliscono
 log_cli = true
 log_cli_level = "WARNING"

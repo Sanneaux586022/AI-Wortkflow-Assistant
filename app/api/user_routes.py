@@ -28,8 +28,8 @@ class UserRegister(MethodView):
         try:
             current_app.send_email_queue.enqueue(
                 send_user_registration_email,
-                user.username,
-                user.email
+                user.email,
+                user.username
             )
         except Exception as e:
             # Logga l'errore ma non bloccare la risposta
