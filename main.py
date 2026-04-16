@@ -43,8 +43,8 @@ def create_app():
     migrate = Migrate(app, db)
 
     # Inizializziamo il rate limiter
+    app.config["RATELIMIT_STORAGE_URI"] = Config.REDIS_URL
     limiter.init_app(app)
-    limiter._storage_uri = Config.REDIS_URL
 
     # Inizializziamo API Smorest
     api = Api(app)
