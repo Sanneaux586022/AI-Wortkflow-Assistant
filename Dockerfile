@@ -37,6 +37,8 @@ RUN uv sync --frozen --no-dev
 
 ENV PATH="/venv/bin:$PATH"
 
+EXPOSE 10000
+
 # CMD ["python", "main.py"]
 # Avvio
 CMD ["/bin/bash", "docker-entrypoint.sh"]
