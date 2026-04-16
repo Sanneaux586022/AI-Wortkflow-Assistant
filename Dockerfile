@@ -37,4 +37,7 @@ RUN uv sync --frozen --no-dev
 
 ENV PATH="/venv/bin:$PATH"
 
-CMD ["python", "main.py"]
+# CMD ["python", "main.py"]
+# Avvio
+CMD ["/bin/bash", "docker-entrypoint.sh"]
+# CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "main:app"]

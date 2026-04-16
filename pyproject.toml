@@ -21,6 +21,7 @@ dependencies = [
     "python-magic",
     "flask-cors",
     "jinja2",
+    "gunicorn"
 ]
 
 [project.optional-dependencies]
