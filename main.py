@@ -15,6 +15,7 @@ from app.models import User
 setup_logging()
 from app.api.request_routes import blp as RequestBlueprint
 from app.api.user_routes import blp as UserBlueprint
+from app.api.admin_routes import blp as AdminBlueprint
 from app.errors import register_error_handlers
 
 
@@ -116,6 +117,7 @@ def create_app():
     # Registrazione Blueprint
     api.register_blueprint(RequestBlueprint)
     api.register_blueprint(UserBlueprint)
+    api.register_blueprint(AdminBlueprint)
     register_error_handlers(app)
 
     return app

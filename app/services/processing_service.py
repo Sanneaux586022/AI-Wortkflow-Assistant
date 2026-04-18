@@ -1,4 +1,5 @@
 from app.models.request import MailRequest, FotoRequest
+from app.services.common_service import CommonService
 
 class ProcessingService:
     def __init__(self, db_session, ai_service, logger):
@@ -101,4 +102,41 @@ class ProcessingService:
             self.logger.error(f"💥 Errore durante l'elaborazione dell'ID {request_id}: {e}")
             raise e
 
+    def processing_pending_requests(self, request_type):
+
+        request_status = "pending"
+        common_service = CommonService(self.db, self.logger)
+        requests_succeed = 0
+        requests_failed = 0
+        all_requests = common_service.get_all_request()
+
+        requests_pending = [
+            req.id
+            for req in all_requests
+            if req.request_type == request_type and req.status == request_status
+        ]
+        if len(requests_pending) == 0:
+            return len(requests_pending), requests_succeed, requests_failed
+
+        for req_id in requests_pending:
+
+            if request_type == "mail":
+                try:
+                    req_proccessed = self.process(req_id)
+                    requests_succeed += 1
+                except Exception as e:
+                    requests_failed += 1
+                    self.logger.error(f"Errore processando richiesta {req_id}: {str(e)}")
+                    continue
+            elif request_type == "foto":
+                try:
+                    req_proccessed = self.predict(req_id)
+                    requests_succeed += 1
+                except Exception as e:
+                    requests_failed += 1
+                    self.logger.error(f"Errore processando richiesta {req_id}: {str(e)}")
+                    continue
+            
+        return len(requests_pending), requests_succeed, requests_failed
+                
 

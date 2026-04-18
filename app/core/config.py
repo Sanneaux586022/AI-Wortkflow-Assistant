@@ -38,3 +38,5 @@ class Config:
     MAILGUN_DOMAIN_NAME = os.getenv("MAILGUN_DOMAIN_NAME")
     # config.py
     ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
+    CRON_SECRET = os.getenv("CRON_SECRET_KEY")

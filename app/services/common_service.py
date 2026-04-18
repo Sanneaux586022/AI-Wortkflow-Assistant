@@ -6,6 +6,7 @@ class CommonService:
         
         self.db = db_session
         self.logger = logger
+        
     # Tutte le richieste.
     def get_all_request(self)-> list[BaseRequest]:
         requests = self.db.session.query(BaseRequest).all()
