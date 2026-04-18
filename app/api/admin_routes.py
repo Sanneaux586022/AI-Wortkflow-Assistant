@@ -20,8 +20,11 @@ common_service = CommonService(db, logger)
 class MailProcessResource(MethodView):
     def post(self):
         # controllare il cron-secret
+        print("inizio MailProcessResource")
         cron_secret = request.headers.get("X-cron-secret")
         request_type = "mail"
+        print(f"{cron_secret}")
+        print(f"{Config.CRON_SECRET}")
 
         if cron_secret != Config.CRON_SECRET:
             abort(401, message="Non Autorizzato.")
@@ -39,8 +42,11 @@ class MailProcessResource(MethodView):
 class FotoProcessResource(MethodView):
     def post(self):
         # controllare il cron-secret
+        print("inizio FotoProcessResource")
         cron_secret = request.headers.get("X-cron-secret")
         request_type = "foto"
+        print(f"{cron_secret}")
+        print(f"{Config.CRON_SECRET}")
 
         if cron_secret != Config.CRON_SECRET:
             abort(401, message="Non Autorizzato.")
