@@ -154,7 +154,7 @@ class TestEndpointProtetti:
         assert resp.status_code == 401
 
     def test_post_requests_senza_token_ritorna_401(self, client):
-        resp = client.post("/requests", json={"text": "test"})
+        resp = client.post("/requests/mail", json={"text": "test"})
         assert resp.status_code == 401
 
     def test_token_invalido_ritorna_401(self, client):

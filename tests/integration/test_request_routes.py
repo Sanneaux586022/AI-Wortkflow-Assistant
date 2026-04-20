@@ -7,18 +7,24 @@ Questi test verificano il flusso completo:
 Il DB usato è SQLite in memoria (ricreato prima di ogni test da conftest.py).
 Redis e Gemini sono mockati a livello di applicazione (conftest.py).
 
-Per gli endpoint che coinvolgono l'AI (POST /requests/<id>/process e
-POST /requests/foto/<id>/process) usiamo patch() per restituire dati finti
-e non fare chiamate reali a Google Gemini.
+Per gli endpoint che coinvolgono l'AI (POST /requests/mail/<id>/process e
+POST /requests/foto/<id>/process) usiamo patch() per intercettare l'accodamento
+sulla coda RQ senza che il worker esegua il task realmente.
 
-Payload richieste mail:
-  {"mail_text": "...", "request_type": "mail"}
+Route mail:
+  POST   /requests/mail              → crea richiesta mail
+  GET    /requests/mail              → lista richieste mail
+  GET    /requests/mail/<id>         → dettaglio richiesta mail
+  POST   /requests/mail/<id>/process → accoda task AI (202 Accepted)
+  DELETE /requests/mail              → elimina tutte (solo admin)
 
-Payload richieste foto:
-  multipart/form-data con campo "file" (FileStorage) e "request_type"
+Route foto:
+  POST   /requests/foto              → carica foto (multipart/form-data)
+  GET    /requests/foto              → lista richieste foto
+  POST   /requests/foto/<id>/process → accoda task AI (202 Accepted)
 
 Nota sul "fresh token":
-  Il token ottenuto direttamente al login è già "fresh". Il fixture
+  Il token ottenuto direttamente al login è già "fresh". La fixture
   auth_headers in conftest.py fa login direttamente, quindi funziona
   sia per @jwt_required() che per @jwt_required(fresh=True).
 """
@@ -45,7 +51,7 @@ def _fake_foto_file(filename="test.jpg"):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TEST: POST /requests — Creazione richiesta mail
+# TEST: POST /requests/mail — Creazione richiesta mail
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestCreazioneRichiestamail:
@@ -55,7 +61,7 @@ class TestCreazioneRichiestamail:
         Caso normale: utente autenticato crea una richiesta mail.
         Deve rispondere 201 con i dati della richiesta appena creata.
         """
-        resp = client.post("/requests", json=MAIL_PAYLOAD, headers=auth_headers)
+        resp = client.post("/requests/mail", json=MAIL_PAYLOAD, headers=auth_headers)
 
         assert resp.status_code == 201
         data = resp.get_json()
@@ -65,7 +71,7 @@ class TestCreazioneRichiestamail:
 
     def test_crea_richiesta_senza_autenticazione_ritorna_401(self, client):
         """Senza token JWT la richiesta deve essere rifiutata con 401."""
-        resp = client.post("/requests", json=MAIL_PAYLOAD)
+        resp = client.post("/requests/mail", json=MAIL_PAYLOAD)
         assert resp.status_code == 401
 
     def test_crea_richiesta_senza_mail_text_ritorna_422(self, client, auth_headers):
@@ -73,22 +79,22 @@ class TestCreazioneRichiestamail:
         Il campo 'mail_text' è obbligatorio (schema Marshmallow).
         Senza di esso la validazione fallisce con 422 Unprocessable Entity.
         """
-        resp = client.post("/requests",
+        resp = client.post("/requests/mail",
                            json={"request_type": "mail"},
                            headers=auth_headers)
         assert resp.status_code == 422
 
     def test_crea_richiesta_senza_body_ritorna_422(self, client, auth_headers):
         """Body JSON vuoto → validazione Marshmallow fallisce con 422."""
-        resp = client.post("/requests", json={}, headers=auth_headers)
+        resp = client.post("/requests/mail", json={}, headers=auth_headers)
         assert resp.status_code == 422
 
     def test_id_richiesta_incrementale(self, client, auth_headers):
         """Le richieste devono avere ID interi progressivi (1, 2, 3...)."""
-        resp1 = client.post("/requests",
+        resp1 = client.post("/requests/mail",
                             json={"mail_text": "Prima", "request_type": "mail"},
                             headers=auth_headers)
-        resp2 = client.post("/requests",
+        resp2 = client.post("/requests/mail",
                             json={"mail_text": "Seconda", "request_type": "mail"},
                             headers=auth_headers)
 
@@ -97,27 +103,27 @@ class TestCreazioneRichiestamail:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TEST: GET /requests — Lista richieste mail
+# TEST: GET /requests/mail — Lista richieste mail
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestListaRichiestemail:
 
     def test_lista_vuota_ritorna_200_con_lista_vuota(self, client, auth_headers):
         """Con nessuna richiesta nel DB, deve rispondere 200 con lista vuota []."""
-        resp = client.get("/requests", headers=auth_headers)
+        resp = client.get("/requests/mail", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.get_json() == []
 
     def test_lista_con_richieste_ritorna_200(self, client, auth_headers):
         """Con richieste presenti, deve rispondere 200 con la lista completa."""
-        client.post("/requests",
+        client.post("/requests/mail",
                     json={"mail_text": "Prima richiesta", "request_type": "mail"},
                     headers=auth_headers)
-        client.post("/requests",
+        client.post("/requests/mail",
                     json={"mail_text": "Seconda richiesta", "request_type": "mail"},
                     headers=auth_headers)
 
-        resp = client.get("/requests", headers=auth_headers)
+        resp = client.get("/requests/mail", headers=auth_headers)
 
         assert resp.status_code == 200
         data = resp.get_json()
@@ -125,12 +131,12 @@ class TestListaRichiestemail:
         assert len(data) == 2
 
     def test_senza_autenticazione_ritorna_401(self, client):
-        resp = client.get("/requests")
+        resp = client.get("/requests/mail")
         assert resp.status_code == 401
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TEST: GET /requests/<id> — Dettaglio richiesta mail
+# TEST: GET /requests/mail/<id> — Dettaglio richiesta mail
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestDettaglioRichiestamail:
@@ -138,82 +144,78 @@ class TestDettaglioRichiestamail:
     def test_dettaglio_richiesta_esistente(self, client, auth_headers):
         """Deve restituire i dati della richiesta specificata dall'ID."""
         create_resp = client.post(
-            "/requests",
+            "/requests/mail",
             json={"mail_text": "Problema con la spedizione", "request_type": "mail"},
             headers=auth_headers,
         )
         req_id = create_resp.get_json()["id"]
 
-        resp = client.get(f"/requests/{req_id}", headers=auth_headers)
+        resp = client.get(f"/requests/mail/{req_id}", headers=auth_headers)
 
         assert resp.status_code == 200
         assert resp.get_json()["mail_text"] == "Problema con la spedizione"
 
     def test_richiesta_inesistente_ritorna_404(self, client, auth_headers):
         """Un ID inesistente deve restituire 404 Not Found."""
-        resp = client.get("/requests/99999", headers=auth_headers)
+        resp = client.get("/requests/mail/99999", headers=auth_headers)
         assert resp.status_code == 404
 
     def test_senza_autenticazione_ritorna_401(self, client):
-        resp = client.get("/requests/1")
+        resp = client.get("/requests/mail/1")
         assert resp.status_code == 401
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TEST: POST /requests/<id>/process — Elaborazione AI mail
+# TEST: POST /requests/mail/<id>/process — Elaborazione AI mail
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestElaborazioneAImail:
     """
-    Usiamo patch() per non chiamare Gemini realmente.
-    Il patch viene applicato direttamente sul metodo process() del
-    ProcessingService già istanziato nel modulo request_routes.
+    Usiamo patch() su main.app.mail_queue per intercettare l'enqueue senza
+    che il worker RQ esegua il task realmente.
+    La route risponde 202 Accepted: il lavoro pesante è delegato al worker.
     """
 
-    def test_process_richiesta_pending_con_ai_mockato(self, client, auth_headers):
+    def test_process_richiesta_pending_con_ai_mockato(self, client, app, auth_headers):
         """
-        Flusso completo con AI mockato:
+        Flusso completo con coda mockata:
         1. Crea una richiesta (status: pending)
         2. Chiama /process
-        3. Verifica che la risposta contenga i risultati AI e status='processed'
+        3. Verifica che il task venga accodato e la risposta sia 202 Accepted
 
-        Usiamo spec=MailRequest sul mock per evitare che Marshmallow lo tratti
-        come Mapping (MagicMock senza spec implementa __getitem__/__len__/__iter__
-        e supera il check isinstance(obj, Mapping)).
+        Usiamo patch.object(app, "mail_queue") e non patch("main.app.mail_queue")
+        perché il test client usa l'istanza flask_app creata in conftest,
+        non l'istanza module-level di main.py.
         """
         create_resp = client.post(
-            "/requests",
+            "/requests/mail",
             json={"mail_text": "Non riesco a fare login", "request_type": "mail"},
             headers=auth_headers,
         )
         req_id = create_resp.get_json()["id"]
 
-        _ts = datetime(2024, 1, 1, tzinfo=timezone.utc)
-
-        with patch("flask.current_app.mail_queue") as mock_queue:
-            resp = client.post(f"/requests/{req_id}/process", headers=auth_headers)
+        with patch.object(app, "mail_queue") as mock_queue:
+            resp = client.post(f"/requests/mail/{req_id}/process", headers=auth_headers)
             mock_queue.enqueue.assert_called_once_with(process_mail_task, req_id)
-        
-        # Verifica la risposta HTTP
             assert resp.status_code == 202
 
     def test_process_richiesta_inesistente_ritorna_404(self, client, auth_headers):
         """Elaborare un ID inesistente deve restituire 404."""
-        resp = client.post("/requests/99999/process", headers=auth_headers)
+        resp = client.post("/requests/mail/99999/process", headers=auth_headers)
         assert resp.status_code == 404
 
-    def test_process_richiesta_gia_elaborata_ritorna_400(self, client,app, auth_headers):
+    def test_process_richiesta_gia_elaborata_ritorna_400(self, client, app, auth_headers):
         """
         Una richiesta già processata (status='processed') non deve essere
         rielaborata → 400 Bad Request.
         Il controllo avviene nella route, prima di invocare il service.
 
-        Strategia: mocchiamo solo l'AI (process_request) e lasciamo girare
-        il ProcessingService reale. Così il DB viene effettivamente aggiornato
-        a status='processed', e la seconda chiamata trova lo stato corretto.
+        Strategia: aggiorniamo manualmente lo status nel DB a 'processed',
+        poi verifichiamo che la seconda chiamata restituisca 400 e che
+        il task NON venga accodato.
         """
         create_resp = client.post(
-            "/requests",
+            "/requests/mail",
             json={"mail_text": "testo", "request_type": "mail"},
             headers=auth_headers,
         )
@@ -226,16 +228,13 @@ class TestElaborazioneAImail:
             db.session.commit()
 
         # Seconda chiamata: status nel DB è ora "processed" → route risponde 400
-        with patch("main.app.mail_queue") as mock_queue:
-            resp = client.post(f"/requests/{req_id}/process", headers=auth_headers)
+        with patch.object(app, "mail_queue") as mock_queue:
+            resp = client.post(f"/requests/mail/{req_id}/process", headers=auth_headers)
             mock_queue.enqueue.assert_not_called()
-        
-            # Verifica la risposta HTTP
             assert resp.status_code == 400
 
-
     def test_senza_autenticazione_ritorna_401(self, client):
-        resp = client.post("/requests/1/process")
+        resp = client.post("/requests/mail/1/process")
         assert resp.status_code == 401
 
 
@@ -314,8 +313,8 @@ class TestEndpointProtetti:
         resp = client.get("/requests")
         assert resp.status_code == 401
 
-    def test_post_requests_senza_token_ritorna_401(self, client):
-        resp = client.post("/requests", json=MAIL_PAYLOAD)
+    def test_post_requests_mail_senza_token_ritorna_401(self, client):
+        resp = client.post("/requests/mail", json=MAIL_PAYLOAD)
         assert resp.status_code == 401
 
     def test_get_foto_senza_token_ritorna_401(self, client):
@@ -330,16 +329,14 @@ class TestEndpointProtetti:
         assert resp.status_code == 401
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TEST: Protezione generale degli endpoint per admin
+# TEST: Protezione endpoint admin
 # ─────────────────────────────────────────────────────────────────────────────
 class TestEndpointAdmin:
     """
-    Verifica che tutti  gli endpoint solo per admin rifiutino qualsiasi chiamata di altri utenti.
+    Verifica che gli endpoint admin rifiutino richieste di utenti non admin.
+    La DELETE su /requests/mail richiede fresh token + is_admin=True nel JWT.
     """
-    def test_delete_all_mail_requests_utente_admin(self, client, auth_headers):
-        """Utente registrato ma non admin."""
-        resp = client.delete("/requests", headers=auth_headers)
+    def test_delete_all_mail_requests_utente_non_admin_ritorna_401(self, client, auth_headers):
+        """Utente registrato ma non admin: deve ricevere 401."""
+        resp = client.delete("/requests/mail", headers=auth_headers)
         assert resp.status_code == 401
-
-
-
