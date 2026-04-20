@@ -9,9 +9,11 @@ class CommonService:
         
     # Tutte le richieste.
     def get_all_request(self)-> list[BaseRequest]:
-        requests = self.db.session.query(BaseRequest).all()
+        """
+        Recupero tutte le richieste presenti nel database.
+        """        
+        return self.db.session.query(BaseRequest).all()
 
-        return requests
     
     # FOTO request methods
 

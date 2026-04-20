@@ -4,7 +4,7 @@ from flask_jwt_extended import get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
 from werkzeug.exceptions import HTTPException
 
-from app.api.schemas import FotoResponseSchema, MailRequestSchema, MailResponseSchema
+from app.api.schemas import FotoResponseSchema, MailRequestSchema, MailResponseSchema, BaseRequestSchema
 from app.core.logger import get_logger
 from app.db.database import db
 # from app.services.ai_service import AIService
@@ -22,8 +22,21 @@ blp = Blueprint(
 ingestion_service = IngestionService(db_session=db, logger=logger)
 common_service = CommonService(db_session=db, logger=logger)
 
-
 @blp.route("")
+class RequestResource(MethodView):
+
+    @jwt_required()
+    # @limiter.limit("10 per minutes")
+    @blp.response(200, BaseRequestSchema(many=True))
+    def get(self):
+        try:
+            all_requests = common_service.get_all_request()
+            logger.info(f"{all_requests}")
+            return all_requests
+        except LookupError as e:
+            abort(404, message=str(e))
+
+@blp.route("/mail")
 class MailResource(MethodView):
     @jwt_required()
     @limiter.limit("5 per minute")
@@ -64,7 +77,7 @@ class MailResource(MethodView):
             abort(500, message=f"Internal Server Error: {str(e)}")
 
 
-@blp.route("/<int:request_id>")
+@blp.route("/mail/<int:request_id>")
 class MailDetailResource(MethodView):
     @jwt_required()
     @limiter.limit("20 per minute")
@@ -95,7 +108,7 @@ class MailDetailResource(MethodView):
             abort(404, message=f"Errore durante la cancellazione: {str(e)}")
 
 
-@blp.route("/<int:request_id>/process")
+@blp.route("/mail/<int:request_id>/process")
 class ProcessMailResource(MethodView):
     @jwt_required(fresh=True)
     @limiter.limit("5 per minute")

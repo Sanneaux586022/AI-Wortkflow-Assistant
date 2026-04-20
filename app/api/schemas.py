@@ -1,5 +1,11 @@
-from marshmallow import Schema, fields, validates, ValidationError
+from marshmallow import Schema, fields, ValidationError
 from werkzeug.datastructures import FileStorage
+
+class BaseRequestSchema(Schema):
+    id = fields.Int(dump_only=True)
+    request_type = fields.String(dump_only=True)
+    status = fields.String(dump_only=True)
+    created_at = fields.DateTime(dump_only=True)
 
 class MailRequestSchema(Schema):
     mail_text = fields.String(required=True, metadata={"description": "Il messaggio del cliente"})
